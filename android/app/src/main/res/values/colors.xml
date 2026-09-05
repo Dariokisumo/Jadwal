@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#4285F4</color>
+
+    <!-- Widget colors — gold accent from app theme (0xFFD4930D) -->
+    <color name="widget_background">#FFFFFF</color>
+    <color name="widget_text_primary">#1A1A1A</color>
+    <color name="widget_text_secondary">#6B6B6B</color>
+    <color name="widget_accent">#D4930D</color>
+    <color name="widget_accent_light">#D4930D</color>
+    <color name="widget_error">#C62828</color>
+</resources>
