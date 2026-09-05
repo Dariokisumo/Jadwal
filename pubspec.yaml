@@ -1,0 +1,78 @@
+name: jadwal
+description: Offline teacher timetable tracker with live period status and local notifications.
+publish_to: 'none'
+version: 2.0.0+36
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # File picking (importing the AI-generated JSON)
+  file_picker: ^8.0.0+1
+
+  # Local persistent storage (single JSON blob)
+  shared_preferences: ^2.2.3
+
+  # Local notifications at period start times
+  flutter_local_notifications: ^17.2.2
+
+  # Timezone support required by flutter_local_notifications for zonedSchedule
+  timezone: ^0.9.4
+
+  # Date/time parsing ("2:00 PM" -> DateTime)
+  intl: ^0.19.0
+
+  # Card animations (glow effect on active period)
+  flutter_animate: ^4.5.0
+
+  # Runtime notification permission requests (Android 13+)
+  permission_handler: ^11.3.1
+  flutter_timezone: ^5.1.0
+
+  # Deep-link to system settings pages (battery optimization, etc.) on Android.
+  android_intent_plus: ^5.2.0
+
+  # Home screen widget support
+  home_widget: ^0.7.0
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter/Inter-Bold.ttf
+          weight: 700
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf
+          weight: 400
+    - family: PlayfairDisplay
+      fonts:
+        - asset: assets/fonts/PlayfairDisplay/PlayfairDisplay-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlayfairDisplay/PlayfairDisplay-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/PlayfairDisplay/PlayfairDisplay-Bold.ttf
+          weight: 700
+
+flutter_launcher_icons:
+  android: true
+  image_path: "Icons/time-management.png"
+  adaptive_icon_background: "#4285F4"
+  adaptive_icon_foreground: "Icons/time-management.png"

@@ -1,0 +1,36 @@
+# Flutter and Dart tooling
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+build/
+
+# Platform and IDE files
+*.iml
+.idea/
+.vscode/
+android/.gradle/
+android/local.properties
+android/build/
+
+# Local or generated artifacts
+Apk files/
+*.keystore
+*.jks
+key.properties
+.env
+
+# Local workspace notes and unreferenced source material
+.agents/
+.claude/
+.impeccable/
+.skills/
+AGENTS.md
+claudemem.md
+skills-lock.json
+Syllabi/
+imgs/
+Icons/
+test_tz.dart
+test_utc_tz.dart
