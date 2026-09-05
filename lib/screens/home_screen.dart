@@ -11,12 +11,15 @@ import '../constants/spacing.dart';
 import '../constants/timetable_prompt.dart';
 import '../constants/weekday_map.dart';
 import '../models/period_model.dart';
+import '../constants/app_version.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../services/update_service.dart';
 import '../services/widget_data_service.dart';
 import '../theme/relational_colors.dart';
 import '../widgets/period_card.dart';
 import '../widgets/theme_bottom_sheet.dart';
+import '../widgets/update_dialog.dart';
 import '../widgets/wavy_divider.dart';
 import 'edit_timetable_screen.dart';
 import 'setup_screen.dart';
@@ -126,6 +129,9 @@ class _HomeScreenState extends State<HomeScreen> {
       initialPage: initialIndex >= 0 ? initialIndex : _dayIndex,
     );
     _loadTimetable();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkSilentUpdate();
+    });
     _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       if (mounted) {
         _detectPeriodTransition();
@@ -439,6 +445,59 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'theme':
         _showThemeSheet();
         break;
+      case 'update':
+        _checkManualUpdate();
+        break;
+    }
+  }
+
+  Future<void> _checkSilentUpdate() async {
+    final release = await UpdateService.checkForUpdate(force: false);
+    if (release != null && release.isNewer && mounted) {
+      UpdateDialog.show(context, release);
+    }
+  }
+
+  Future<void> _checkManualUpdate() async {
+    final colors = context.relColors;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'Checking for updates...',
+          style: TextStyle(fontFamily: 'Inter'),
+        ),
+        duration: const Duration(seconds: 2),
+        backgroundColor: colors.surfaceContainer,
+      ),
+    );
+
+    final release = await UpdateService.checkForUpdate(force: true);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    if (release != null && release.isNewer) {
+      UpdateDialog.show(context, release);
+    } else if (release != null && !release.isNewer) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Jadwal is up to date (v$kAppVersion)',
+            style: const TextStyle(fontFamily: 'Inter'),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not reach GitHub. Check your internet connection.',
+            style: TextStyle(fontFamily: 'Inter'),
+          ),
+          duration: Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -575,6 +634,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: _menuRow(
                   icon: Icons.palette_rounded,
                   label: 'Theme',
+                  colors: colors,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'update',
+                child: _menuRow(
+                  icon: Icons.system_update_alt_rounded,
+                  label: 'Check for updates',
                   colors: colors,
                 ),
               ),

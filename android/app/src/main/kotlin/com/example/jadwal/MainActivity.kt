@@ -32,11 +32,35 @@ class MainActivity: FlutterActivity() {
                     PeriodicRefreshReceiver.schedulePeriodicRefresh(this)
                     result.success(true)
                 }
+                "getDeviceArchitecture" -> {
+                    result.success(getDeviceArchitecture())
+                }
                 else -> {
                     result.notImplemented()
                 }
             }
         }
+    }
+
+    private fun getDeviceArchitecture(): String {
+        val supported64 = Build.SUPPORTED_64_BIT_ABIS
+        if (supported64 != null && supported64.isNotEmpty()) {
+            return "arm64"
+        }
+        val supportedAbis = Build.SUPPORTED_ABIS
+        if (supportedAbis != null && supportedAbis.isNotEmpty()) {
+            val primary = supportedAbis[0].lowercase()
+            if (primary.contains("arm64") || primary.contains("aarch64")) {
+                return "arm64"
+            }
+            if (primary.contains("arm") || primary.contains("v7a")) {
+                return "arm32"
+            }
+            if (primary.contains("x86_64")) {
+                return "arm64"
+            }
+        }
+        return "arm32"
     }
 
     private fun canScheduleExactAlarms(): Boolean {

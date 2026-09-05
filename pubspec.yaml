@@ -1,7 +1,7 @@
 name: jadwal
 description: Offline teacher timetable tracker with live period status and local notifications.
 publish_to: 'none'
-version: 2.0.0+36
+version: 2.1.0+37
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
