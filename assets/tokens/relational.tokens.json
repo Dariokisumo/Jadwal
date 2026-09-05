@@ -1,0 +1,53 @@
+{
+  "name": "jadwal",
+  "seed": "action",
+  "primitives": {
+    "action": "oklch(0.7096 0.1463 76.69)",
+    "actionHover": "oklch(0.6396 0.1463 76.69)",
+    "actionSubtle": "oklch(0.96 0.04 76.69)",
+    "actionNavy": "oklch(0.3462 0.0736 256.04)",
+    "actionCopper": "oklch(0.6555 0.1240 60.55)",
+    "danger": "oklch(0.52 0.20 25)",
+    "dangerSubtle": "oklch(0.94 0.05 25)",
+    "success": "oklch(0.58 0.16 142)",
+    "surfaceLight": "0xFFFFFCF5",
+    "surfaceContainerLight": "0xFFF7F2E9",
+    "surfaceContainerHighestLight": "0xFFEDE7DC",
+    "textLight": "0xFF1A1612",
+    "textSecondaryLight": "0xFF5C5347",
+    "borderSubtleLight": "0xFFD6CFC5",
+    "borderMutedLight": "0xFF8A7E72",
+    "surfaceDark": "0xFF1A1612",
+    "surfaceContainerDark": "0xFF231F1A",
+    "surfaceContainerHighestDark": "0xFF2D2822",
+    "textDark": "0xFFF5F2EB",
+    "textSecondaryDark": "0xFFB8B2A6",
+    "borderSubtleDark": "0xFF403A33",
+    "borderMutedDark": "0xFF665F56"
+  },
+  "colors": {
+    "action": { "light": "action", "dark": "action" },
+    "actionHover": { "light": "actionHover", "dark": "actionHover" },
+    "actionSubtle": { "light": "actionSubtle", "dark": "surfaceContainerDark" },
+    "danger": { "light": "danger", "dark": "danger" },
+    "success": { "light": "success", "dark": "success" },
+    "surface": { "light": "surfaceLight", "dark": "surfaceDark" },
+    "surfaceContainer": { "light": "surfaceContainerLight", "dark": "surfaceContainerDark" },
+    "surfaceContainerHighest": { "light": "surfaceContainerHighestLight", "dark": "surfaceContainerHighestDark" },
+    "textPrimary": { "light": "textLight", "dark": "textDark" },
+    "textSecondary": { "light": "textSecondaryLight", "dark": "textSecondaryDark" },
+    "borderSubtle": { "light": "borderSubtleLight", "dark": "borderSubtleDark" },
+    "borderMuted": { "light": "borderMutedLight", "dark": "borderMutedDark" }
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "base": 16,
+    "lg": 20,
+    "xl": 24,
+    "xxl": 32,
+    "xxxl": 48
+  },
+  "font": { "family": "Inter", "googleFonts": false }
+}
