@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark mode widget colors -->
+    <color name="widget_background">#1A1A1A</color>
+    <color name="widget_text_primary">#E0E0E0</color>
+    <color name="widget_text_secondary">#9E9E9E</color>
+    <color name="widget_accent">#D4930D</color>
+    <color name="widget_accent_light">#D4930D</color>
+    <color name="widget_error">#EF5350</color>
+</resources>
