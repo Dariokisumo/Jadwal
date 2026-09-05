@@ -1,0 +1,97 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Required for local notifications to fire reliably at exact times. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- Required to ask the user to exempt Jadwal from battery optimization.
+         On OEM skins like OnePlus/OxygenOS, even with SCHEDULE_EXACT_ALARM
+         granted, the OS can silently kill the process and drop scheduled
+         alarms. Without REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, the runtime
+         request dialog cannot be shown. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Required on Android 13+ (API 33) before any notification can show. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Keeps exact alarms working correctly across device reboots/timezone changes. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!--
+      Deliberately NO android.permission.INTERNET — this app is offline by
+      design. flutter_local_notifications, file_picker, shared_preferences,
+      and permission_handler do not require it.
+    -->
+
+    <application
+        android:label="Jadwal"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Home screen widget receiver -->
+        <receiver
+            android:name=".JadwalWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/jadwal_widget_info" />
+        </receiver>
+
+        <!-- Midnight refresh receiver: reschedules alarm on boot + triggers widget update at day boundary -->
+        <receiver
+            android:name=".MidnightReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="com.example.jadwal.MIDNIGHT_REFRESH" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Periodic (5-min) widget refresh receiver to keep timings in sync throughout the day -->
+        <receiver
+            android:name=".PeriodicRefreshReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.jadwal.PERIODIC_REFRESH" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+</manifest>
