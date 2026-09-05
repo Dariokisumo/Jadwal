@@ -124,7 +124,10 @@ class _PeriodCardState extends State<PeriodCard> {
           _cardContent(
             subjectColor: colors.action,
             secondaryColor: colors.action,
-            badge: null,
+            badge: _ongoingBadge(
+              reduceMotion: reduceMotion,
+              colors: colors,
+            ),
             strikethrough: false,
             boldSubject: true,
           ),
@@ -147,36 +150,21 @@ class _PeriodCardState extends State<PeriodCard> {
         ],
       ),
     );
-    final body = reduceMotion
-        ? card
-        : ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Stack(
-              children: [
-                card,
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 2,
-                  child: _EdgeLight(color: colors.action),
-                ),
-              ],
-            ),
-          );
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        body,
-        Positioned(
-          top: 8,
-          right: 4,
-          child: _ongoingBadge(
-            reduceMotion: reduceMotion,
-            colors: colors,
+    if (reduceMotion) return card;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Stack(
+        children: [
+          card,
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 2,
+            child: _EdgeLight(color: colors.action),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -210,29 +198,18 @@ class _PeriodCardState extends State<PeriodCard> {
     return Semantics(
       label: 'Ongoing',
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: colors.surface,
+          color: colors.action.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: colors.action.withValues(alpha: 0.3),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: colors.activeGlow.withValues(alpha: 0.15),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             reduceMotion
                 ? Container(
-                    width: 6,
-                    height: 6,
+                    width: 5,
+                    height: 5,
                     decoration: BoxDecoration(
                       color: colors.action,
                       shape: BoxShape.circle,
@@ -241,13 +218,12 @@ class _PeriodCardState extends State<PeriodCard> {
                 : _BreathingDot(color: colors.action),
             const SizedBox(width: 5),
             Text(
-              'ONGOING',
+              'now',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
                 color: colors.action,
-                letterSpacing: 0.5,
               ),
             ),
           ],

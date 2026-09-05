@@ -18,11 +18,11 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!--
-      Deliberately NO android.permission.INTERNET — this app is offline by
-      design. flutter_local_notifications, file_picker, shared_preferences,
-      and permission_handler do not require it.
-    -->
+    <!-- Required for update checking against the GitHub Releases API.
+         The app is still offline-first — this is the only outbound call,
+         triggered only when the user taps "Check for updates" or silently
+         once every 24 h on launch. No analytics or telemetry. -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:label="Jadwal"

@@ -206,15 +206,19 @@ class _WavyProgressPainter extends CustomPainter {
     final centerY = size.height / 2;
     final fillWidth = (size.width * value).clamp(0.0, size.width);
 
+    // Both track and fill share the identical wave path — only the clip rect
+    // splits the colour. This guarantees the two waves are perfectly in phase
+    // at the fill boundary with zero amplitude mismatch.
+    final wavePaint = Paint()
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
     // ── Track (full width, dim) ──────────────────────────────────────────────
     canvas.drawPath(
-      _wavePath(0, size.width, centerY, size.width),
-      Paint()
-        ..color = trackColor
-        ..strokeWidth = strokeWidth
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
+      _wavePath(0, size.width, centerY),
+      wavePaint..color = trackColor,
     );
 
     // ── Fill (clipped to fillWidth) ──────────────────────────────────────────
@@ -222,13 +226,8 @@ class _WavyProgressPainter extends CustomPainter {
       canvas.save();
       canvas.clipRect(Rect.fromLTWH(0, 0, fillWidth, size.height));
       canvas.drawPath(
-        _wavePath(0, size.width, centerY, fillWidth),
-        Paint()
-          ..color = activeColor
-          ..strokeWidth = strokeWidth
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round,
+        _wavePath(0, size.width, centerY),
+        wavePaint..color = activeColor,
       );
       canvas.restore();
     }
@@ -236,28 +235,26 @@ class _WavyProgressPainter extends CustomPainter {
 
   /// Builds a sine-wave [Path] from [startX] to [endX] centered at [centerY].
   ///
-  /// [fillHead] is the x-coordinate of the fill boundary. The dampening
-  /// envelope tapers amplitude to 0 within [_dampenZone] px of:
-  ///   - the left edge (x ≈ 0)
-  ///   - the fill head (x ≈ fillHead) — creates a smooth flat tip
-  ///   - the right edge (x ≈ endX)
-  Path _wavePath(double startX, double endX, double centerY, double fillHead) {
+  /// Amplitude is dampened to 0 only at the left edge and right edge
+  /// (within [_dampenZone] px). The fill boundary is handled purely by a
+  /// clip rect so both the track and fill waves are geometrically identical —
+  /// no seam or amplitude jump at the fill head.
+  Path _wavePath(double startX, double endX, double centerY) {
     final path = Path();
-    // Step size — 1px gives smooth curves without being expensive on mobile.
+    // Step size — 1 px gives smooth curves without being expensive on mobile.
     const step = 1.0;
     bool started = false;
 
     for (double x = startX; x <= endX + step; x += step) {
       final xClamped = x.clamp(startX, endX);
 
-      // Dampening envelope [0.0 – 1.0]
+      // Dampening envelope [0.0 – 1.0] — edges only, no mid-path flattening.
       final dLeft = (xClamped - startX) / _dampenZone;
       final dRight = (endX - xClamped) / _dampenZone;
-      final dHead = (fillHead - xClamped).abs() / _dampenZone;
 
       final envelope = math.min(
-        1.0,
-        math.min(dLeft.clamp(0.0, 1.0), math.min(dRight.clamp(0.0, 1.0), dHead.clamp(0.0, 1.0))),
+        dLeft.clamp(0.0, 1.0),
+        dRight.clamp(0.0, 1.0),
       );
 
       // Smooth the envelope with a cubic ease for organic feel.
