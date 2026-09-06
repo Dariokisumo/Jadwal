@@ -29,14 +29,15 @@ class UpdateDialog extends StatefulWidget {
 class _UpdateDialogState extends State<UpdateDialog> {
   String _detectedArch = 'arm64';
   bool _detecting = true;
+  String? _preResolvedUrl;
 
   @override
   void initState() {
     super.initState();
-    _detectArchitecture();
+    _detectArchitectureAndPreResolve();
   }
 
-  Future<void> _detectArchitecture() async {
+  Future<void> _detectArchitectureAndPreResolve() async {
     final arch = await UpdateService.getDeviceArchitecture();
     if (mounted) {
       setState(() {
@@ -44,6 +45,32 @@ class _UpdateDialogState extends State<UpdateDialog> {
         _detecting = false;
       });
     }
+    try {
+      final targetUrl = widget.release.getDownloadUrlForArch(arch);
+      final direct = await UpdateService.resolveDirectDownloadUrl(targetUrl);
+      if (mounted) {
+        _preResolvedUrl = direct;
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _startDownload(BuildContext context, String fallbackUrl) async {
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop();
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Starting download...',
+          style: TextStyle(fontFamily: 'Inter'),
+        ),
+        duration: Duration(seconds: 2),
+      ),
+    );
+    final finalUrl = (fallbackUrl == widget.release.getDownloadUrlForArch(_detectedArch) &&
+            _preResolvedUrl != null)
+        ? _preResolvedUrl!
+        : await UpdateService.resolveDirectDownloadUrl(fallbackUrl);
+    await UpdateService.openUrl(finalUrl);
   }
 
   @override
@@ -285,10 +312,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
 
             // Primary Direct Download Button (Auto-matched to device ABI)
             FilledButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop();
-                UpdateService.openUrl(targetDownloadUrl);
-              },
+              onPressed: () => _startDownload(context, targetDownloadUrl),
               icon: Icon(
                 Icons.download_rounded,
                 size: 19,
@@ -317,10 +341,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
             if (hasAlternate) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  UpdateService.openUrl(otherDownloadUrl);
-                },
+                onPressed: () => _startDownload(context, otherDownloadUrl),
                 icon: Icon(
                   Icons.download_rounded,
                   size: 17,

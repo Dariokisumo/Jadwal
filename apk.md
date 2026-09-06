@@ -187,7 +187,7 @@ Removed unused native libraries — one ABI per APK:
 
 ## Version
 
-Current: `1.9.9+35` (in `pubspec.yaml`)
+Current: `2.1.2+40` (in `pubspec.yaml`)
 
 Edit `pubspec.yaml` line 4 — version format: `MAJOR.MINOR.PATCH+BUILD`
 - Display: `MAJOR.MINOR.PATCH` (e.g. `1.8.2`)
@@ -197,8 +197,8 @@ Edit `pubspec.yaml` line 4 — version format: `MAJOR.MINOR.PATCH+BUILD`
 APK picks up version automatically from pubspec — no manual Android edits.
 
 ## Output
-- `Apk files/jadwal-v1.9.9-35-release.apk` (arm64-v8a only, ~24.5MB) — `make build`
-- `Apk files/apk32/jadwal-v1.9.9-35-release.apk` (armeabi-v7a only, ~21.9MB) — `make build-arm32`
+- `Apk files/jadwal-v2.1.2-40-release.apk` (arm64-v8a only, ~24.8MB) — `make build`
+- `Apk files/apk32/jadwal-v2.1.2-40-release.apk` (armeabi-v7a only, ~22.2MB) — `make build-arm32`
 
 ## GitHub Releases & Sync Policy ("Git it")
 

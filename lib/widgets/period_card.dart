@@ -28,7 +28,6 @@ class PeriodCard extends StatefulWidget {
 
 class _PeriodCardState extends State<PeriodCard> {
   bool _pressing = false;
-  final List<DateTime> _tapTimestamps = [];
 
   @override
   Widget build(BuildContext context) {
@@ -57,34 +56,16 @@ class _PeriodCardState extends State<PeriodCard> {
           '${p.start} to ${p.end}',
       child: GestureDetector(
         onTapDown: (_) => setState(() => _pressing = true),
-        onTapUp: (_) {
-          setState(() => _pressing = false);
-          HapticFeedback.lightImpact();
-          _handleTap();
-        },
+        onTapUp: (_) => setState(() => _pressing = false),
         onTapCancel: () => setState(() => _pressing = false),
         child: AnimatedScale(
-          scale: _pressing ? 0.97 : 1.0,
+          scale: _pressing ? 0.98 : 1.0,
           duration: const Duration(milliseconds: 100),
           curve: Curves.easeOutCubic,
           child: child,
         ),
       ),
     );
-  }
-
-  void _handleTap() {
-    if (widget.onToggleFinished == null) return;
-    final now = DateTime.now();
-    _tapTimestamps.add(now);
-    // Prune taps older than 800ms.
-    _tapTimestamps.removeWhere(
-        (t) => now.difference(t).inMilliseconds > 800);
-    if (_tapTimestamps.length >= 3) {
-      _tapTimestamps.clear();
-      HapticFeedback.mediumImpact();
-      widget.onToggleFinished!();
-    }
   }
 
   Widget _buildUpcomingCard(BuildContext context) {
@@ -104,6 +85,7 @@ class _PeriodCardState extends State<PeriodCard> {
             ? _countdownBadge(countdown, colors)
             : null,
         strikethrough: false,
+        colors: colors,
       ),
     );
   }
@@ -112,6 +94,7 @@ class _PeriodCardState extends State<PeriodCard> {
     final colors = context.relColors;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final progress = widget.period.progress;
+    final minutesRemaining = widget.period.minutesRemaining;
     final card = Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -130,21 +113,41 @@ class _PeriodCardState extends State<PeriodCard> {
             ),
             strikethrough: false,
             boldSubject: true,
+            colors: colors,
           ),
           if (progress != null) ...[
             const SizedBox(height: 10),
-            Semantics(
-              label: 'Period progress ${(progress * 100).round()} percent',
-              child: WavyProgressBar(
-                value: progress,
-                activeColor: colors.action,
-                trackColor: colors.action.withValues(alpha: 0.15),
-                height: 6.0,
-                amplitude: 2.5,
-                wavelength: 26.0,
-                strokeWidth: 2.2,
-                animate: !reduceMotion,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Semantics(
+                    label: 'Period progress ${(progress * 100).round()} percent',
+                    child: WavyProgressBar(
+                      value: progress,
+                      activeColor: colors.action,
+                      trackColor: colors.action.withValues(alpha: 0.15),
+                      height: 6.0,
+                      amplitude: 2.5,
+                      wavelength: 26.0,
+                      strokeWidth: 2.2,
+                      animate: !reduceMotion,
+                    ),
+                  ),
+                ),
+                if (minutesRemaining != null) ...[
+                  const SizedBox(width: 10),
+                  Text(
+                    '${Period.formatMinutes(minutesRemaining)} left',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: colors.action,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ],
@@ -245,25 +248,88 @@ class _PeriodCardState extends State<PeriodCard> {
         secondaryColor: colors.borderMuted,
         badge: _doneBadge(colors: colors),
         strikethrough: true,
+        colors: colors,
+        isDone: true,
       ),
     );
   }
 
   Widget _doneBadge({required RelationalColors colors}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.borderSubtle, width: 0.5),
+    return Semantics(
+      label: 'Done. Tap to mark as unfinished',
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onToggleFinished != null
+            ? () {
+                HapticFeedback.lightImpact();
+                widget.onToggleFinished!();
+              }
+            : null,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.borderSubtle, width: 0.5),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_rounded, size: 12, color: colors.textSecondary),
+              const SizedBox(width: 4),
+              Text(
+                'Done',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Text(
-        '✓ Done',
-        style: TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: colors.textSecondary,
+    );
+  }
+
+  Widget _unobtrusiveCheckBtn({required RelationalColors colors}) {
+    if (widget.onToggleFinished == null) return const SizedBox.shrink();
+    return Semantics(
+      label: 'Mark as finished',
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          widget.onToggleFinished!();
+        },
+        child: Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.borderSubtle.withValues(alpha: 0.12),
+                border: Border.all(
+                  color: colors.borderSubtle,
+                  width: 1.2,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.check_rounded,
+                size: 13,
+                color: colors.borderMuted,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -274,6 +340,8 @@ class _PeriodCardState extends State<PeriodCard> {
     required Color secondaryColor,
     required Widget? badge,
     required bool strikethrough,
+    required RelationalColors colors,
+    bool isDone = false,
     bool boldSubject = false,
   }) {
     return Row(
@@ -286,10 +354,14 @@ class _PeriodCardState extends State<PeriodCard> {
             color: secondaryColor.withValues(alpha: 0.1),
             borderRadius: PeriodVisuals.borderRadius(widget.period.periodNumber),
           ),
-          child: Icon(
-            PeriodVisuals.icons[widget.period.periodNumber] ?? Icons.circle,
-            size: 20,
-            color: secondaryColor,
+          child: Text(
+            '${widget.period.periodNumber}',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: secondaryColor,
+            ),
           ),
         ),
         const SizedBox(width: 14),
@@ -354,6 +426,7 @@ class _PeriodCardState extends State<PeriodCard> {
                         fontFamily: 'PlayfairDisplay',
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                         color: secondaryColor,
                       ),
                     ),
@@ -364,6 +437,8 @@ class _PeriodCardState extends State<PeriodCard> {
           ),
         ),
         if (badge != null) badge,
+        if (widget.onToggleFinished != null && !isDone)
+          _unobtrusiveCheckBtn(colors: colors),
       ],
     );
   }

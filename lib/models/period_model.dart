@@ -91,6 +91,40 @@ class Period {
     return s.difference(now).inMinutes;
   }
 
+  /// Minutes remaining in this active period. Returns null if not active.
+  /// Minimum 1 minute when ongoing.
+  int? get minutesRemaining {
+    final s = startTime;
+    final e = endTime;
+    if (s == null || e == null) return null;
+    final now = DateTime.now();
+    if (now.isBefore(s) || now.isAfter(e)) return null;
+    final remaining = e.difference(now).inMinutes;
+    return remaining <= 0 ? 1 : remaining;
+  }
+
+  /// Calculates the gap in minutes between two consecutive periods.
+  static int? gapInMinutes(Period a, Period b) {
+    final endA = a.endTime;
+    final startB = b.startTime;
+    if (endA == null || startB == null) return null;
+    return startB.difference(endA).inMinutes;
+  }
+
+  /// Formats a break label based on the gap duration and previous period end time.
+  static String breakLabel(int gapMinutes, Period previousPeriod) {
+    final formatted = formatMinutes(gapMinutes);
+    final endA = previousPeriod.endTime;
+    final isMidday = endA != null && endA.hour >= 12 && endA.hour <= 14;
+
+    if (gapMinutes >= 30 && isMidday) {
+      return '$formatted Lunch Break';
+    } else if (gapMinutes <= 25) {
+      return '$formatted Recess';
+    }
+    return '$formatted Break';
+  }
+
   /// Formats total minutes into a human-readable string.
   /// e.g. 65 -> "1h 5m", 45 -> "45m", 1 -> "1m"
   static String formatMinutes(int totalMinutes) {

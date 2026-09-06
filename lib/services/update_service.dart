@@ -16,6 +16,7 @@ class AppReleaseInfo {
   final String? arm32Url;
   final String? fallbackApkUrl;
   final bool isNewer;
+  final String currentVersion;
 
   const AppReleaseInfo({
     required this.tagName,
@@ -26,6 +27,7 @@ class AppReleaseInfo {
     this.arm32Url,
     this.fallbackApkUrl,
     required this.isNewer,
+    required this.currentVersion,
   });
 
   /// The best primary download URL available (prefers arm64 for modern Android).
@@ -116,7 +118,8 @@ class UpdateService {
         }
       }
 
-      final isNewer = isVersionNewer(tagName, kAppVersion);
+      final installedVersion = await getInstalledVersion();
+      final isNewer = isVersionNewer(tagName, installedVersion);
       final changelogBullets = parseChangelogToSimpleEnglish(rawBody);
 
       return AppReleaseInfo(
@@ -128,6 +131,7 @@ class UpdateService {
         arm32Url: arm32Url,
         fallbackApkUrl: fallbackApkUrl,
         isNewer: isNewer,
+        currentVersion: installedVersion,
       );
     } catch (_) {
       // Offline, network failure, or timeout — fails silently.
@@ -216,6 +220,47 @@ class UpdateService {
   }
 
   static const _platform = MethodChannel('com.jadwal/exact_alarm');
+
+  /// Returns the installed application version from the system package manager,
+  /// falling back to [kAppVersion] if unavailable.
+  static Future<String> getInstalledVersion() async {
+    try {
+      if (Platform.isAndroid) {
+        final version = await _platform.invokeMethod<String>('getAppVersion');
+        if (version != null && version.trim().isNotEmpty) {
+          return version.trim();
+        }
+      }
+    } catch (_) {}
+    return kAppVersion;
+  }
+
+  /// Resolves the direct CDN download URL for a GitHub release asset by fetching
+  /// the HTTP 302 'Location' redirect header. This bypasses the GitHub redirect
+  /// hop in the browser for faster downloads.
+  static Future<String> resolveDirectDownloadUrl(String url) async {
+    if (!url.contains('github.com')) return url;
+    HttpClient? client;
+    try {
+      client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 4);
+      final request = await client.getUrl(Uri.parse(url));
+      request.followRedirects = false;
+      request.headers.set('User-Agent', 'Jadwal-Android-App');
+      final response = await request.close().timeout(const Duration(seconds: 4));
+      if (response.isRedirect) {
+        final location = response.headers.value(HttpHeaders.locationHeader);
+        if (location != null && location.isNotEmpty) {
+          return location;
+        }
+      }
+    } catch (_) {
+      // Fall back to original url if resolution fails
+    } finally {
+      client?.close(force: true);
+    }
+    return url;
+  }
 
   /// Detects whether the current device's hardware/OS supports 64-bit ('arm64')
   /// or only 32-bit ('arm32').

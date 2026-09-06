@@ -89,63 +89,66 @@ class ThemeBottomSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: accents.map((accent) {
-              final (name, color, label) = accent;
-              final isSelected = currentAccent == name;
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: GestureDetector(
-                  onTap: () {
-                    accentNotifier.value = name;
-                    StorageService.saveAccent(name);
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isSelected
-                                ? colors.action
-                                : Colors.transparent,
-                            width: 2,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: accents.map((accent) {
+                final (name, color, label) = accent;
+                final isSelected = currentAccent == name;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: GestureDetector(
+                    onTap: () {
+                      accentNotifier.value = name;
+                      StorageService.saveAccent(name);
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? colors.action
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: colors.activeGlow
+                                          .withValues(alpha: 0.35),
+                                      blurRadius: 6,
+                                      spreadRadius: 1,
+                                    )
+                                  ]
+                                : null,
                           ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: colors.activeGlow
-                                        .withValues(alpha: 0.35),
-                                    blurRadius: 6,
-                                    spreadRadius: 1,
-                                  )
-                                ]
-                              : null,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: isSelected
-                              ? colors.textPrimary
-                              : colors.textSecondary,
+                        const SizedBox(height: 8),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color: isSelected
+                                ? colors.textPrimary
+                                : colors.textSecondary,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
+                );
+              }).toList(),
+            ),
           ),
         ],
       ),
@@ -157,6 +160,8 @@ const accents = [
   ('default', Primitives.actionGold, 'Gold'),
   ('navy', Primitives.actionNavy, 'Navy'),
   ('copper', Primitives.actionCopper, 'Copper'),
+  ('sage', Primitives.actionSage, 'Sage'),
+  ('slate', Primitives.actionSlate, 'Slate'),
 ];
 
 class _ModeChip extends StatelessWidget {

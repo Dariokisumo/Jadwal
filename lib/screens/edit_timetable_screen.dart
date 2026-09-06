@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../constants/period_schedule.dart';
-import '../constants/period_visuals.dart';
 import '../constants/spacing.dart';
 import '../constants/timetable_prompt.dart';
 import '../services/storage_service.dart';
@@ -255,12 +254,16 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
                       ),
                     ),
                     alignment: Alignment.center,
-                    child: Icon(
-                      PeriodVisuals.icons[p] ?? Icons.circle,
-                      size: 22,
-                      color: occupied
-                          ? colors.borderMuted
-                          : colors.action,
+                    child: Text(
+                      '$p',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: occupied
+                            ? colors.borderMuted
+                            : colors.action,
+                      ),
                     ),
                   ),
                 );
@@ -521,10 +524,14 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
-          PeriodVisuals.icons[periodNum] ?? Icons.circle,
-          size: 14,
-          color: colors.action,
+        Text(
+          'P$periodNum',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: colors.action,
+          ),
         ),
         const SizedBox(height: 2),
         Text(

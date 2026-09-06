@@ -11,16 +11,15 @@ import '../constants/spacing.dart';
 import '../constants/timetable_prompt.dart';
 import '../constants/weekday_map.dart';
 import '../models/period_model.dart';
-import '../constants/app_version.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/update_service.dart';
 import '../services/widget_data_service.dart';
 import '../theme/relational_colors.dart';
+import '../widgets/break_indicator.dart';
 import '../widgets/period_card.dart';
 import '../widgets/theme_bottom_sheet.dart';
 import '../widgets/update_dialog.dart';
-import '../widgets/wavy_divider.dart';
 import 'edit_timetable_screen.dart';
 import 'setup_screen.dart';
 
@@ -390,12 +389,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadPeriodsForDay(dayKey);
   }
 
-  bool _isSameBlock(Period a, Period b) {
-    final blockA = a.periodNumber <= 6 ? 0 : 1;
-    final blockB = b.periodNumber <= 6 ? 0 : 1;
-    return blockA == blockB;
-  }
-
   Future<void> _reimport() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -482,7 +475,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Jadwal is up to date (v$kAppVersion)',
+            'App is up to date (v${release.currentVersion})',
             style: const TextStyle(fontFamily: 'Inter'),
           ),
           duration: const Duration(seconds: 3),
@@ -754,6 +747,39 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           itemCount: dayPeriods.length,
           itemBuilder: (context, i) {
+            Widget? connector;
+            if (i < dayPeriods.length - 1) {
+              final current = dayPeriods[i];
+              final next = dayPeriods[i + 1];
+              final gap = Period.gapInMinutes(current, next);
+
+              if (gap != null && gap > 0) {
+                final label = Period.breakLabel(gap, current);
+                final isNowBreak = dayIsToday &&
+                    current.endTime != null &&
+                    next.startTime != null &&
+                    DateTime.now().isAfter(current.endTime!) &&
+                    DateTime.now().isBefore(next.startTime!);
+
+                connector = BreakIndicator(
+                  label: label,
+                  gapMinutes: gap,
+                  isNow: isNowBreak,
+                );
+              } else {
+                connector = Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Divider(
+                    height: 1,
+                    thickness: 0.5,
+                    indent: 24,
+                    endIndent: 24,
+                    color: colors.borderSubtle.withValues(alpha: 0.4),
+                  ),
+                );
+              }
+            }
+
             return Column(
               children: [
                 PeriodCard(
@@ -770,13 +796,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? () => _togglePeriodFinished(dayPeriods[i].periodNumber)
                       : null,
                 ),
-                if (i < dayPeriods.length - 1)
-                  _isSameBlock(dayPeriods[i], dayPeriods[i + 1])
-                      ? const SizedBox(height: AppSpacing.sm)
-                      : WavyDivider(
-                          lineColor: colors.borderSubtle,
-                          iconColor: colors.action,
-                        ),
+                if (connector != null) connector,
               ],
             );
           },

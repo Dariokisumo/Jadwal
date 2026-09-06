@@ -15,6 +15,8 @@ const Map<String, Color> accentSeeds = {
   'default': Primitives.actionGold,
   'navy': Primitives.actionNavy,
   'copper': Primitives.actionCopper,
+  'sage': Primitives.actionSage,
+  'slate': Primitives.actionSlate,
 };
 
 Future<void> main() async {

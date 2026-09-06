@@ -43,6 +43,28 @@ ThemeData buildRelationalTheme(
       activeGlow =
           isDark ? Primitives.actionCopperDark : Primitives.actionCopper;
       break;
+    case 'sage':
+      actionColor =
+          isDark ? Primitives.actionSageDark : Primitives.actionSage;
+      actionHover =
+          isDark ? Primitives.actionSage : Primitives.actionSageHover;
+      actionSubtle = isDark
+          ? Primitives.actionSageDarkContainer
+          : Primitives.actionSageSubtle;
+      activeGlow =
+          isDark ? Primitives.actionSageDark : Primitives.actionSage;
+      break;
+    case 'slate':
+      actionColor =
+          isDark ? Primitives.actionSlateDark : Primitives.actionSlate;
+      actionHover =
+          isDark ? Primitives.actionSlate : Primitives.actionSlateHover;
+      actionSubtle = isDark
+          ? Primitives.actionSlateDarkContainer
+          : Primitives.actionSlateSubtle;
+      activeGlow =
+          isDark ? Primitives.actionSlateDark : Primitives.actionSlate;
+      break;
     case 'default':
     default:
       actionColor = isDark ? Primitives.actionGoldDark : Primitives.actionGold;

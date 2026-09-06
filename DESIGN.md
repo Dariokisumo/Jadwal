@@ -61,18 +61,22 @@ Widgets must use `context.relColors.*` for all color values. Direct `Theme.of(co
 
 ### Accent Seeds
 
-Three user-selectable accents. Each derives a full M3 `ColorScheme` **and** fills the relational semantic slots.
+Five user-selectable accents. Each derives a full M3 `ColorScheme` **and** fills the relational semantic slots.
 
 | Name | Light Hex | Dark Hex | Notes |
 |------|-----------|----------|-------|
 | **Gold** (default) | `#D4930D` | `#F0A830` | Warm saffron. Scholarly. |
 | **Navy** | `#1E3A5F` | `#5A89C7` | Cool contrast on warm surfaces. |
 | **Copper** | `#C77D38` | `#E29A57` | Warm harmony on dark backgrounds. |
+| **Sage** | `#4A6B53` | `#7CA886` | Calm, earthy olive/sage. |
+| **Slate** | `#4B5563` | `#9CA3AF` | Ultra-minimalist newspaper-like monochrome. |
 
 Container tints (light / dark):
 - Gold: `#FFF3D6` / `#3D3015`
 - Navy: `#E8EFF7` / `#122238`
 - Copper: `#FAEDE3` / `#3A2312`
+- Sage: `#EAF2EB` / `#1E2B21`
+- Slate: `#F1F3F5` / `#252930`
 
 ### Surface Ramp (Warm Neutral — shared across all accents)
 

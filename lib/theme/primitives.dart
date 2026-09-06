@@ -44,6 +44,30 @@ abstract final class Primitives {
   // oklch(0.24 0.04 60.55) — deep container wash for dark mode
   static const Color actionCopperDarkContainer = Color(0xFF3A2312);
 
+  // ── Accent: Sage (Olive) ──────────────────────────────────────────────────
+  // oklch(0.48 0.07 145.0) — calm earthy olive/sage accent
+  static const Color actionSage = Color(0xFF4A6B53);
+  // oklch(0.41 0.07 145.0) — hover/press step
+  static const Color actionSageHover = Color(0xFF3B5842);
+  // oklch(0.95 0.02 145.0) — subtle light container wash
+  static const Color actionSageSubtle = Color(0xFFEAF2EB);
+  // oklch(0.68 0.09 145.0) — bright sage for dark mode
+  static const Color actionSageDark = Color(0xFF7CA886);
+  // oklch(0.22 0.03 145.0) — deep container wash for dark mode
+  static const Color actionSageDarkContainer = Color(0xFF1E2B21);
+
+  // ── Accent: Slate (Parchment / Monochrome) ────────────────────────────────
+  // oklch(0.46 0.025 260.0) — ultra-minimalist slate accent
+  static const Color actionSlate = Color(0xFF4B5563);
+  // oklch(0.39 0.025 260.0) — hover/press step
+  static const Color actionSlateHover = Color(0xFF374151);
+  // oklch(0.96 0.01 260.0) — subtle light container wash
+  static const Color actionSlateSubtle = Color(0xFFF1F3F5);
+  // oklch(0.69 0.03 260.0) — bright slate for dark mode
+  static const Color actionSlateDark = Color(0xFF9CA3AF);
+  // oklch(0.23 0.02 260.0) — deep container wash for dark mode
+  static const Color actionSlateDarkContainer = Color(0xFF252930);
+
   // ── Light Neutrals & Surfaces (Warm undertone) ────────────────────────────
   // oklch(0.985 0.012 85.0) — clean warm surface
   static const Color surfaceLight = Color(0xFFFFFCF5);

@@ -21,6 +21,7 @@ class SetupScreen extends StatefulWidget {
 
 class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStateMixin {
   final _jsonController = TextEditingController();
+  final _scrollController = ScrollController();
   bool _hasPastedContent = false;
   bool _promptCopied = false;
   bool _stepOneComplete = false;
@@ -45,7 +46,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
     TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.95), weight: 25),
     TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.07), weight: 35),
     TweenSequenceItem(tween: Tween(begin: 1.07, end: 1.0), weight: 40),
-  ]).animate(CurvedAnimation(parent: _copyBounceController, curve: Curves.easeOutBack));
+  ]).animate(CurvedAnimation(parent: _copyBounceController, curve: Curves.easeOut));
 
   late final Animation<double> _activeDotPulseScale = Tween<double>(begin: 1.0, end: 1.2).animate(
     CurvedAnimation(parent: _activeDotPulseController, curve: Curves.easeInOut),
@@ -79,6 +80,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
     _copyBounceController.dispose();
     _activeDotPulseController.dispose();
     _jsonController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -88,10 +90,75 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
     setState(() {
       _promptCopied = true;
       _stepOneComplete = true;
+      _showStepTwo = true;
     });
     _copyBounceController.forward(from: 0.0);
+    _scrollToStepTwo();
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) setState(() => _promptCopied = false);
+  }
+
+  void _scrollToStepTwo() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    });
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text;
+    if (text != null && text.trim().isNotEmpty) {
+      _jsonController.text = text.trim();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Pasted timetable JSON from clipboard',
+              style: TextStyle(fontFamily: 'Inter'),
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Clipboard is empty or does not contain text',
+            style: TextStyle(fontFamily: 'Inter'),
+          ),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  static String _sanitizeJson(String raw) {
+    var s = raw.trim();
+    // Strip markdown code block fences if present: ```json ... ``` or ``` ... ```
+    if (s.startsWith('```')) {
+      final firstNewline = s.indexOf('\n');
+      if (firstNewline != -1) {
+        s = s.substring(firstNewline + 1);
+      }
+      if (s.endsWith('```')) {
+        s = s.substring(0, s.length - 3);
+      }
+      s = s.trim();
+    }
+    // Extract outermost JSON object if surrounded by chat or explanation text
+    final start = s.indexOf('{');
+    final end = s.lastIndexOf('}');
+    if (start != -1 && end != -1 && end > start) {
+      s = s.substring(start, end + 1);
+    }
+    return s;
   }
 
   Future<void> _importJsonString(String raw) async {
@@ -101,14 +168,15 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
     });
 
     try {
+      final cleaned = _sanitizeJson(raw);
       dynamic decoded;
       try {
-        decoded = jsonDecode(raw);
+        decoded = jsonDecode(cleaned);
       } catch (_) {
         setState(() {
           _errorMessage =
               'This is not valid JSON. Make sure the AI returned '
-              'raw JSON with no extra text or markdown around it.';
+              'a valid timetable JSON object.';
           _isProcessing = false;
         });
         return;
@@ -230,6 +298,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
+          controller: _scrollController,
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,18 +339,75 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
               const SizedBox(height: 24),
               _buildProgressIndicator(colors),
               const SizedBox(height: 24),
-              _buildStepOne(colors),
-              if (_showStepTwo || _showStepThree)
-                _AnimatedStep(
-                  colors: colors,
-                  stepKey: _showStepThree ? 'step2-step3' : 'step1-step2',
-                  child: _showStepThree
-                      ? _buildStepThree(colors)
-                      : _buildStepTwo(colors),
-                ),
+              if (!_showStepThree) ...[
+                _buildStepOne(colors),
+                if (_showStepTwo) ...[
+                  const SizedBox(height: 20),
+                  _buildStepTwo(colors),
+                ],
+              ] else ...[
+                _buildCompletedSummary(colors),
+                const SizedBox(height: 20),
+                _buildStepThree(colors),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCompletedSummary(RelationalColors colors) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: colors.actionSubtle,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.check_rounded,
+              color: colors.action,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Timetable Imported',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Your schedule data is saved offline on device.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -409,33 +535,40 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Once the AI replies with JSON, copy the response and paste it '
-            'in the next step.',
+            'in Step 2 below.',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 12.5,
               color: colors.textSecondary,
             ),
           ),
-          AnimatedSlide(
-            offset: _stepOneComplete && !_showStepTwo ? Offset.zero : const Offset(0, 0.5),
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-            child: AnimatedOpacity(
-              opacity: _stepOneComplete && !_showStepTwo ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-              child: _stepOneComplete && !_showStepTwo
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 14),
-                      child: TextButton(
-                        onPressed: () => setState(() => _showStepTwo = true),
-                        style: TextButton.styleFrom(foregroundColor: colors.action),
-                        child: const Text('Next Step →'),
-                      ),
-                    )
-                  : const SizedBox.shrink(),
+          if (!_showStepTwo) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () {
+                  setState(() => _showStepTwo = true);
+                  _scrollToStepTwo();
+                },
+                icon: Icon(Icons.arrow_downward_rounded, size: 16, color: colors.action),
+                label: Text(
+                  'Already have JSON? Paste it here →',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: colors.action,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -450,14 +583,37 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Paste JSON',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: colors.textPrimary,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Paste JSON',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _isProcessing ? null : _pasteFromClipboard,
+                icon: Icon(Icons.content_paste_rounded, size: 14, color: colors.action),
+                label: Text(
+                  'Paste from clipboard',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: colors.action,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 6),
           TextField(
@@ -765,39 +921,3 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
   }
 }
 
-class _AnimatedStep extends StatelessWidget {
-  const _AnimatedStep({
-    required this.colors,
-    required this.stepKey,
-    required this.child,
-  });
-
-  final RelationalColors colors;
-  final String stepKey;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final reduced = MediaQuery.of(context).disableAnimations;
-    return AnimatedSwitcher(
-      duration: Duration(milliseconds: reduced ? 0 : 350),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      transitionBuilder: (child, animation) {
-        final slide = Tween(
-          begin: const Offset(0, 0.25),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut));
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(position: slide, child: child),
-        );
-      },
-      child: Padding(
-        key: ValueKey(stepKey),
-        padding: const EdgeInsets.only(top: 24),
-        child: child,
-      ),
-    );
-  }
-}

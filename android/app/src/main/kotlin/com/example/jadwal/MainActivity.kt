@@ -3,6 +3,7 @@ package com.example.jadwal
 import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -34,6 +35,9 @@ class MainActivity: FlutterActivity() {
                 }
                 "getDeviceArchitecture" -> {
                     result.success(getDeviceArchitecture())
+                }
+                "getAppVersion" -> {
+                    result.success(getAppVersion())
                 }
                 else -> {
                     result.notImplemented()
@@ -99,5 +103,19 @@ class MainActivity: FlutterActivity() {
             } catch (_: Exception) {}
         }
         return false
+    }
+
+    private fun getAppVersion(): String {
+        return try {
+            val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(packageName, 0)
+            }
+            packageInfo.versionName ?: ""
+        } catch (_: Exception) {
+            ""
+        }
     }
 }
