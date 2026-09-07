@@ -5,26 +5,60 @@ import 'package:intl/intl.dart';
 import '../constants/period_schedule.dart';
 import '../constants/spacing.dart';
 import '../constants/timetable_prompt.dart';
+import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../services/widget_data_service.dart';
 import '../theme/relational_colors.dart';
+
+class _EditHistoryState {
+  final Map<String, dynamic> timetable;
+  final int periodCount;
+
+  _EditHistoryState(this.timetable, this.periodCount);
+}
 
 class EditTimetableController extends ChangeNotifier {
   Map<String, dynamic> _timetable;
-  final List<Map<String, dynamic>> _undoStack = [];
-  final List<Map<String, dynamic>> _redoStack = [];
+  int _periodCount;
+  final List<_EditHistoryState> _undoStack = [];
+  final List<_EditHistoryState> _redoStack = [];
   bool _hasChanges = false;
   static const int _maxStackDepth = 50;
 
-  EditTimetableController(Map<String, dynamic> initial)
-      : _timetable = _deepCopyTimetable(initial);
+  EditTimetableController(Map<String, dynamic> initial, {int? periodCount})
+      : _timetable = _deepCopyTimetable(initial),
+        _periodCount = periodCount ??
+            (_calculateMaxPeriod(initial) > 9
+                ? _calculateMaxPeriod(initial)
+                : 9);
 
   Map<String, dynamic> get timetable => _timetable;
+  int get periodCount => _periodCount;
+  List<int> get periods => List.generate(_periodCount, (i) => i + 1);
   bool get hasChanges => _hasChanges;
   bool get canUndo => _undoStack.isNotEmpty;
   bool get canRedo => _redoStack.isNotEmpty;
 
+  static int _calculateMaxPeriod(Map<String, dynamic> timetable) {
+    int maxP = 0;
+    for (final val in timetable.values) {
+      if (val is List) {
+        for (final item in val) {
+          if (item is Map && item['period'] != null) {
+            final p = item['period'];
+            final n = p is int ? p : int.tryParse(p.toString()) ?? 0;
+            if (n > maxP) maxP = n;
+          }
+        }
+      }
+    }
+    return maxP;
+  }
+
   void _pushState() {
-    _undoStack.add(_deepCopyTimetable(_timetable));
+    _undoStack.add(
+      _EditHistoryState(_deepCopyTimetable(_timetable), _periodCount),
+    );
     if (_undoStack.length > _maxStackDepth) _undoStack.removeAt(0);
     _redoStack.clear();
     _hasChanges = true;
@@ -33,16 +67,24 @@ class EditTimetableController extends ChangeNotifier {
 
   void undo() {
     if (_undoStack.isEmpty) return;
-    _redoStack.add(_deepCopyTimetable(_timetable));
-    _timetable = _undoStack.removeLast();
+    _redoStack.add(
+      _EditHistoryState(_deepCopyTimetable(_timetable), _periodCount),
+    );
+    final prev = _undoStack.removeLast();
+    _timetable = prev.timetable;
+    _periodCount = prev.periodCount;
     _hasChanges = _undoStack.isNotEmpty || _redoStack.isNotEmpty;
     notifyListeners();
   }
 
   void redo() {
     if (_redoStack.isEmpty) return;
-    _undoStack.add(_deepCopyTimetable(_timetable));
-    _timetable = _redoStack.removeLast();
+    _undoStack.add(
+      _EditHistoryState(_deepCopyTimetable(_timetable), _periodCount),
+    );
+    final next = _redoStack.removeLast();
+    _timetable = next.timetable;
+    _periodCount = next.periodCount;
     _hasChanges = true;
     notifyListeners();
   }
@@ -100,6 +142,42 @@ class EditTimetableController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void addPeriodColumn() {
+    if (_periodCount >= 15) return;
+    _pushState();
+    _periodCount++;
+    notifyListeners();
+  }
+
+  void removePeriodColumn(int periodNumber) {
+    if (_periodCount <= 1) return;
+    _pushState();
+    for (final dayKey in kDayKeys) {
+      final list = _getDayList(dayKey);
+      list.removeWhere((entry) {
+        final p = entry['period'];
+        final num = p is int ? p : int.tryParse(p.toString());
+        return num == periodNumber;
+      });
+      for (final entry in list) {
+        final p = entry['period'];
+        final num = p is int ? p : int.tryParse(p.toString()) ?? 0;
+        if (num > periodNumber) {
+          entry['period'] = num - 1;
+        }
+      }
+      _timetable[dayKey] = list;
+    }
+    _periodCount--;
+    notifyListeners();
+  }
+
+  void setPeriodCount(int count) {
+    if (count == _periodCount || count < 1 || count > 15) return;
+    _periodCount = count;
+    notifyListeners();
+  }
+
   void reorderPeriod(String dayKey, int fromPeriod, int toPeriod) {
     if (fromPeriod == toPeriod) return;
     _pushState();
@@ -125,6 +203,11 @@ class EditTimetableController extends ChangeNotifier {
         data['teacher'] = existing['teacher']?.toString() ?? '';
       }
       await StorageService.saveTimetable(data);
+      await StorageService.savePeriodCount(_periodCount);
+      await NotificationService.scheduleAll(
+        (data['timetable'] as Map).cast<String, dynamic>(),
+      );
+      await WidgetDataService.updateWidget();
       _hasChanges = false;
       _undoStack.clear();
       _redoStack.clear();
@@ -161,13 +244,23 @@ class EditTimetableScreen extends StatefulWidget {
 
 class _EditTimetableScreenState extends State<EditTimetableScreen> {
   late final EditTimetableController _controller;
-  static const List<int> _periods = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
   @override
   void initState() {
     super.initState();
     _controller = EditTimetableController(widget.timetable);
     _controller.addListener(() => setState(() {}));
+    _initPeriodCount();
+  }
+
+  Future<void> _initPeriodCount() async {
+    final stored = await StorageService.loadPeriodCount();
+    if (mounted && !_controller.hasChanges && stored != _controller.periodCount) {
+      final maxP =
+          EditTimetableController._calculateMaxPeriod(widget.timetable);
+      final effective = stored > maxP ? stored : (maxP > 0 ? maxP : stored);
+      _controller.setPeriodCount(effective);
+    }
   }
 
   @override
@@ -190,7 +283,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
   }
 
   void _showReorderSheet(String dayKey, int periodNumber) {
-    final available = _periods.where((p) => p != periodNumber).toList();
+    final available = _controller.periods.where((p) => p != periodNumber).toList();
     final colors = context.relColors;
 
     showModalBottomSheet(
@@ -431,21 +524,90 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
     return Row(
       children: [
         const SizedBox(width: 44),
-        ..._periods.map((p) => SizedBox(
+        ..._controller.periods.map((p) => SizedBox(
               width: 64,
-              child: Center(
-                child: Text(
-                  'P$p',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: colors.textSecondary,
+              child: GestureDetector(
+                onLongPress: () => _showRemoveColumnConfirmation(p),
+                child: Center(
+                  child: Text(
+                    'P$p',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textSecondary,
+                    ),
                   ),
                 ),
               ),
             )),
+        if (_controller.periodCount < 15)
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                _controller.addPeriodColumn();
+              },
+              child: Container(
+                width: 32,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: colors.action.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: colors.action.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  Icons.add_rounded,
+                  size: 16,
+                  color: colors.action,
+                ),
+              ),
+            ),
+          ),
       ],
+    );
+  }
+
+  void _showRemoveColumnConfirmation(int periodNumber) {
+    if (_controller.periodCount <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot remove the only period column.')),
+      );
+      return;
+    }
+
+    final colors = context.relColors;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Delete Period $periodNumber Column?',
+          style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'This will remove Period $periodNumber and all its scheduled classes across all days. Subsequent periods will be shifted down.',
+          style: TextStyle(fontFamily: 'Inter', color: colors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              HapticFeedback.mediumImpact();
+              _controller.removePeriodColumn(periodNumber);
+            },
+            style: TextButton.styleFrom(foregroundColor: colors.danger),
+            child: const Text('Delete Column', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -466,7 +628,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
               ),
             ),
           ),
-          ..._periods.map((p) => _buildCell(dayKey, p, colors)),
+          ..._controller.periods.map((p) => _buildCell(dayKey, p, colors)),
         ],
       ),
     );
@@ -675,9 +837,9 @@ class _PeriodEditSheetState extends State<_PeriodEditSheet> {
       _startTime = widget.existing!['start']?.toString() ?? '8:00 AM';
       _endTime = widget.existing!['end']?.toString() ?? '8:40 AM';
     } else {
-      final schedule = kPeriodSchedule[widget.periodNumber];
-      _startTime = schedule?[0] ?? '8:00 AM';
-      _endTime = schedule?[1] ?? '8:40 AM';
+      final defaultTimes = defaultTimingForPeriod(widget.periodNumber);
+      _startTime = defaultTimes[0];
+      _endTime = defaultTimes[1];
     }
   }
 

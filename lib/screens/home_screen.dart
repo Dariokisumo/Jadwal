@@ -21,6 +21,7 @@ import '../widgets/period_card.dart';
 import '../widgets/theme_bottom_sheet.dart';
 import '../widgets/update_dialog.dart';
 import 'edit_timetable_screen.dart';
+import 'misc_screen.dart';
 import 'setup_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -435,12 +436,24 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'replace':
         _reimport();
         break;
+      case 'misc':
+        _openMisc();
+        break;
       case 'theme':
         _showThemeSheet();
         break;
       case 'update':
         _checkManualUpdate();
         break;
+    }
+  }
+
+  Future<void> _openMisc() async {
+    final modified = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const MiscScreen()),
+    );
+    if (modified == true && mounted) {
+      _loadTimetable();
     }
   }
 
@@ -622,6 +635,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'misc',
+                child: _menuRow(
+                  icon: Icons.tune_rounded,
+                  label: 'Misc',
+                  colors: colors,
+                ),
+              ),
               PopupMenuItem(
                 value: 'theme',
                 child: _menuRow(

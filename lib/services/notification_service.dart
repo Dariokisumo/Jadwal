@@ -303,8 +303,8 @@ class NotificationService {
           now,
         );
 
-        // Unique ID: dayIndex (0-5) * 10 + periodNumber (1-9) → no collisions.
-        final notifId = dayIndex * 10 + period.periodNumber;
+        // Unique ID: dayIndex (0-6) * 100 + periodNumber -> supports up to 99 periods without collisions.
+        final notifId = dayIndex * 100 + period.periodNumber;
 
         try {
           await _plugin.zonedSchedule(
