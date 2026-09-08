@@ -136,9 +136,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadTimetable();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkSilentUpdate();
+      final pending = DeepLinkService.consumePendingProfile();
+      if (pending != null && mounted) {
+        _handleImportedProfile(pending);
+      }
     });
     _deepLinkSub = DeepLinkService.onProfileReceived.listen((profile) {
-      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+      if (mounted) {
         _handleImportedProfile(profile);
       }
     });

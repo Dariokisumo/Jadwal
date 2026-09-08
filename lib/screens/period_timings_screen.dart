@@ -42,6 +42,12 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
         _processIncomingProfile(profile);
       }
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final pending = DeepLinkService.consumePendingProfile();
+      if (pending != null && mounted) {
+        _processIncomingProfile(pending);
+      }
+    });
   }
 
   @override

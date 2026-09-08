@@ -11,6 +11,15 @@ class DeepLinkService {
   static Stream<TimingProfile> get onProfileReceived =>
       _profileStreamController.stream;
 
+  static TimingProfile? _pendingProfile;
+
+  /// Returns and consumes any pending profile that arrived before a listener was attached (e.g. cold start).
+  static TimingProfile? consumePendingProfile() {
+    final p = _pendingProfile;
+    _pendingProfile = null;
+    return p;
+  }
+
   static bool _initialized = false;
 
   /// Initializes deep link listener and checks for initial launch deep links.
@@ -44,6 +53,7 @@ class DeepLinkService {
   static void _handleRawPayload(String raw) {
     final profile = TimingProfile.fromSharePayload(raw);
     if (profile != null) {
+      _pendingProfile = profile;
       _profileStreamController.add(profile);
     }
   }
