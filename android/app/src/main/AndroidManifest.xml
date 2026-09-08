@@ -95,6 +95,16 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="jadwal" android:host="profile"/>
             </intent-filter>
+            <!-- Android App Link handler for timing profiles: https://dariokisumo.github.io/p#... -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="dariokisumo.github.io"
+                    android:pathPrefix="/p" />
+            </intent-filter>
         </activity>
 
         <meta-data

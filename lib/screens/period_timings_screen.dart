@@ -66,6 +66,9 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
         final text = clip.text!.trim();
         if (text.contains('jadwal://') ||
             text.contains('JADWAL_PROFILE:') ||
+            text.contains('http://') ||
+            text.contains('https://') ||
+            text.startsWith('Sl') ||
             text.startsWith('{')) {
           controller.text = text;
         }

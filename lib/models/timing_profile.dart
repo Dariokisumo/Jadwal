@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/services.dart';
 
 import '../constants/period_schedule.dart';
@@ -30,13 +32,82 @@ class TimingProfile {
         'slots': slots.map((k, v) => MapEntry(k.toString(), v)),
       };
 
-  /// Serializes this profile into a URL-safe base64 string.
+  /// Parses strict or relaxed "h:mm a" (e.g. "8:30 AM", "12:10 PM") into minutes from midnight (0..1439).
+  static int? parseTimeToMinutes(String timeStr) {
+    final regex = RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)$', caseSensitive: false);
+    final match = regex.firstMatch(timeStr.trim());
+    if (match == null) return null;
+    var hour = int.tryParse(match.group(1)!);
+    final min = int.tryParse(match.group(2)!);
+    final isPm = match.group(3)!.toUpperCase() == 'PM';
+    if (hour == null || min == null) return null;
+    if (hour == 12) {
+      hour = isPm ? 12 : 0;
+    } else if (isPm) {
+      hour += 12;
+    }
+    return hour * 60 + min;
+  }
+
+  /// Converts minutes from midnight (0..1439) into formatted "h:mm a" string.
+  static String formatMinutesToTime(int totalMin) {
+    var h = (totalMin ~/ 60) % 24;
+    final m = totalMin % 60;
+    final period = h >= 12 ? 'PM' : 'AM';
+    var hour12 = h % 12;
+    if (hour12 == 0) hour12 = 12;
+    final mStr = m.toString().padLeft(2, '0');
+    return '$hour12:$mStr $period';
+  }
+
+  /// Serializes this profile into a compact URL-safe base64 string.
+  /// Uses a high-density minute-based binary encoding (~80 chars) when possible,
+  /// with automatic fallback to JSON base64.
   String toSharePayload() {
+    var canUseCompact = true;
+    for (final timing in slots.values) {
+      if (timing.length < 2 ||
+          parseTimeToMinutes(timing[0]) == null ||
+          parseTimeToMinutes(timing[1]) == null) {
+        canUseCompact = false;
+        break;
+      }
+    }
+
+    if (canUseCompact) {
+      final nameBytes = utf8.encode(name);
+      final nameLen = nameBytes.length > 255 ? 255 : nameBytes.length;
+      final truncatedNameBytes = nameBytes.sublist(0, nameLen);
+
+      final sortedSlots = slots.keys.toList()..sort();
+      final slotCount = sortedSlots.length > 255 ? 255 : sortedSlots.length;
+
+      final bytes = BytesBuilder();
+      bytes.add([0x4A, 0x50, 0x01]); // Magic 'J', 'P', version 1
+      bytes.addByte(nameLen);
+      bytes.add(truncatedNameBytes);
+      bytes.addByte(slotCount);
+
+      for (var i = 0; i < slotCount; i++) {
+        final pNum = sortedSlots[i];
+        final startMin = parseTimeToMinutes(slots[pNum]![0])!;
+        final endMin = parseTimeToMinutes(slots[pNum]![1])!;
+
+        bytes.addByte(pNum & 0xFF);
+        bytes.addByte((startMin >> 8) & 0xFF);
+        bytes.addByte(startMin & 0xFF);
+        bytes.addByte((endMin >> 8) & 0xFF);
+        bytes.addByte(endMin & 0xFF);
+      }
+
+      return base64Url.encode(bytes.toBytes()).replaceAll('=', '');
+    }
+
     final jsonStr = jsonEncode(toJson());
     return base64Url.encode(utf8.encode(jsonStr));
   }
 
-  /// Generates a human-friendly text summary with deep link and import code.
+  /// Generates a human-friendly text summary with universal web link and import code.
   String toFormattedShareText() {
     final payload = toSharePayload();
     final sortedSlots = slots.keys.toList()..sort();
@@ -51,7 +122,7 @@ class TimingProfile {
     }
 
     buffer.writeln('\nOpen in Jadwal:');
-    buffer.writeln('jadwal://profile?data=$payload');
+    buffer.writeln('https://dariokisumo.github.io/p#$payload');
     buffer.writeln('\nOr import code in Jadwal (Misc > Period Timings):');
     buffer.writeln('JADWAL_PROFILE:$payload');
 
@@ -87,13 +158,27 @@ class TimingProfile {
         cleaned = endIdx == -1
             ? cleaned.substring(startIdx)
             : cleaned.substring(startIdx, endIdx);
+      } else if (cleaned.contains(RegExp(r'https?://'))) {
+        final startIdx = cleaned.indexOf(RegExp(r'https?://'));
+        final endIdx = cleaned.indexOf(RegExp(r'\s'), startIdx);
+        cleaned = endIdx == -1
+            ? cleaned.substring(startIdx)
+            : cleaned.substring(startIdx, endIdx);
       }
 
-      // Extract from deep link URL: jadwal://profile?data=...
-      if (cleaned.startsWith('jadwal://')) {
+      // Extract from deep link URL: jadwal://profile?data=... or https://...
+      if (cleaned.startsWith('jadwal://') ||
+          cleaned.startsWith('http://') ||
+          cleaned.startsWith('https://')) {
         final uri = Uri.tryParse(cleaned);
-        if (uri != null && uri.queryParameters.containsKey('data')) {
-          cleaned = uri.queryParameters['data']!;
+        if (uri != null) {
+          if (uri.queryParameters.containsKey('data')) {
+            cleaned = uri.queryParameters['data']!;
+          } else if (uri.hasFragment && uri.fragment.isNotEmpty) {
+            cleaned = uri.fragment;
+          } else if (uri.pathSegments.isNotEmpty) {
+            cleaned = uri.pathSegments.last;
+          }
         }
       }
 
@@ -103,29 +188,78 @@ class TimingProfile {
       }
 
       // First attempt: base64Url decode
-      Map<String, dynamic>? decodedJson;
+      List<int>? bytes;
       try {
-        // Normalize base64 if needed
         var normalized = cleaned;
         while (normalized.length % 4 != 0) {
           normalized += '=';
         }
-        final bytes = base64Url.decode(normalized);
-        final jsonStr = utf8.decode(bytes);
-        decodedJson = jsonDecode(jsonStr) as Map<String, dynamic>?;
-      } catch (_) {
-        // Fallback: direct json parse
+        bytes = base64Url.decode(normalized);
+      } catch (_) {}
+
+      if (bytes != null && bytes.isNotEmpty) {
+        var activeBytes = bytes;
+        // Optional zlib decompression support
+        if (activeBytes.length > 2 && activeBytes[0] == 0x78) {
+          try {
+            activeBytes = zlib.decode(activeBytes);
+          } catch (_) {}
+        }
+
+        // Check for compact binary minute-format: 'J', 'P', 0x01
+        if (activeBytes.length >= 5 &&
+            activeBytes[0] == 0x4A &&
+            activeBytes[1] == 0x50 &&
+            activeBytes[2] == 0x01) {
+          var offset = 3;
+          final nameLen = activeBytes[offset++];
+          if (activeBytes.length >= offset + nameLen + 1) {
+            final name = utf8.decode(activeBytes.sublist(offset, offset + nameLen));
+            offset += nameLen;
+            final slotCount = activeBytes[offset++];
+            if (activeBytes.length >= offset + slotCount * 5) {
+              final slots = <int, List<String>>{};
+              for (var i = 0; i < slotCount; i++) {
+                final pNum = activeBytes[offset++];
+                final startMin = (activeBytes[offset++] << 8) | activeBytes[offset++];
+                final endMin = (activeBytes[offset++] << 8) | activeBytes[offset++];
+                slots[pNum] = [
+                  formatMinutesToTime(startMin),
+                  formatMinutesToTime(endMin)
+                ];
+              }
+              if (slots.isNotEmpty) {
+                return TimingProfile(
+                  id: 'imported_${DateTime.now().millisecondsSinceEpoch}',
+                  name: name.isEmpty ? 'Schedule' : name,
+                  slots: slots,
+                );
+              }
+            }
+          }
+        }
+
+        // Fallback: UTF-8 JSON
         try {
-          decodedJson = jsonDecode(cleaned) as Map<String, dynamic>?;
+          final jsonStr = utf8.decode(activeBytes);
+          final decodedJson = jsonDecode(jsonStr);
+          if (decodedJson is Map<String, dynamic>) {
+            final profile = TimingProfile.fromJson(decodedJson);
+            if (profile.slots.isNotEmpty) return profile;
+          }
         } catch (_) {}
       }
 
-      if (decodedJson == null) return null;
+      // Fallback: direct json parse
+      try {
+        final decodedJson = jsonDecode(cleaned);
+        if (decodedJson is Map<String, dynamic>) {
+          final profile = TimingProfile.fromJson(decodedJson);
+          if (profile.slots.isNotEmpty) return profile;
+        }
+      } catch (_) {}
 
-      final profile = TimingProfile.fromJson(decodedJson);
-      if (profile.slots.isEmpty) return null;
-
-      return profile;
+      return null;
     } catch (_) {
       return null;
     }

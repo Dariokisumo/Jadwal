@@ -30,7 +30,7 @@ class MainActivity: FlutterActivity() {
     private fun handleDeepLink(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW) {
             val data = intent.data
-            if (data != null && data.scheme == "jadwal") {
+            if (data != null && (data.scheme == "jadwal" || data.scheme == "https" || data.scheme == "http")) {
                 val url = data.toString()
                 pendingDeepLink = url
                 methodChannel?.invokeMethod("onDeepLink", url)
