@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jadwal — Timetable Tracker</title>
+  <meta name="description" content="Jadwal: offline timetable tracker with live period status, home widget, and automatic local notifications for Android.">
+  <meta property="og:title" content="Jadwal — Timetable Tracker">
+  <meta property="og:description" content="Open your timetable profile in Jadwal or download the app.">
+  <meta property="og:url" content="https://dariokisumo.github.io">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&display=swap" rel="stylesheet">
+  <style>
+    /* ─── Design Tokens (DESIGN.md aligned) ──────────────────────────── */
+    :root {
+      /* Tier 1 — Primitives */
+      --p-amber:       #D4930D;
+      --p-amber-hover: #E5A41E;
+      --p-amber-12:    rgba(212,147,13,0.12);
+      --p-amber-20:    rgba(212,147,13,0.20);
+      --p-amber-06:    rgba(212,147,13,0.06);
+
+      --p-surface:          #1A1612;
+      --p-surface-container: #231F1A;
+      --p-surface-highest:  #2D2822;
+      --p-text:             #F5F2EB;
+      --p-text-secondary:   #B8B2A6;
+      --p-text-subtle:      #8A7E72;
+      --p-border-subtle:    #403A33;
+      --p-border-muted:     #665F56;
+
+      /* Tier 2 — Semantic aliases */
+      --bg:             var(--p-surface);
+      --card:           var(--p-surface-container);
+      --card-border:    var(--p-border-subtle);
+      --text:           var(--p-text);
+      --text-muted:     var(--p-text-secondary);
+      --text-subtle:    var(--p-text-subtle);
+      --action:         var(--p-amber);
+      --action-hover:   var(--p-amber-hover);
+      --action-fg:      #1A1612;
+      --accent-surface: var(--p-amber-12);
+      --accent-border:  var(--p-amber-20);
+
+      /* Spacing (4px base) */
+      --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px;
+      --sp-4: 16px; --sp-5: 20px; --sp-6: 24px;
+      --sp-8: 32px; --sp-10: 40px; --sp-12: 48px;
+      --sp-16: 64px; --sp-20: 80px;
+
+      /* Radius */
+      --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+      --r-xl: 20px; --r-2xl: 24px; --r-full: 9999px;
+
+      /* Shadows */
+      --shadow-btn: 0 2px 12px rgba(212,147,13,0.25);
+      --shadow-btn-hover: 0 4px 20px rgba(212,147,13,0.35);
+      --shadow-slot: 0 1px 3px rgba(0,0,0,0.12);
+      --shadow-phone: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06) inset;
+    }
+
+    /* ─── Reset ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ─── Base ───────────────────────────────────────────────────────── */
+    body {
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(ellipse 900px 500px at 50% -100px, rgba(212,147,13,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 500px 400px at 85% 100%, rgba(90,70,170,0.03) 0%, transparent 60%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-optical-sizing: auto;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a { text-decoration: none; color: inherit; }
+
+    /* ─── Page wrapper ───────────────────────────────────────────────── */
+    .page {
+      width: 100%;
+      max-width: 1080px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: var(--sp-12) var(--sp-6);
+    }
+
+    /* ─── Badge ──────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-surface);
+      border: 1px solid var(--accent-border);
+      color: var(--action);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .7px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: var(--r-full);
+      width: fit-content;
+    }
+
+    .badge svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* ─── Typography ─────────────────────────────────────────────────── */
+    .hero-headline {
+      font-size: clamp(34px, 5vw, 60px);
+      font-weight: 800;
+      font-variation-settings: 'opsz' 48;
+      letter-spacing: -1.5px;
+      line-height: 1.08;
+      color: #fff;
+      margin-top: var(--sp-6);
+    }
+
+    .hero-headline .accent { color: var(--action); }
+
+    .hero-subtitle {
+      color: var(--text-muted);
+      font-size: clamp(15px, 1.6vw, 18px);
+      line-height: 1.6;
+      max-width: 480px;
+      font-weight: 400;
+      margin-top: var(--sp-3);
+    }
+
+    /* ─── Hero layout (home state — two-column) ──────────────────────── */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-16);
+      align-items: center;
+      animation: fadeUp .5s cubic-bezier(.22,.68,0,1.05) both;
+    }
+
+    .hero-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* ─── Features grid ──────────────────────────────────────────────── */
+    .features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-2);
+      margin-top: var(--sp-10);
+    }
+
+    .feature-pill {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      background: var(--p-surface-container);
+      border: 1px solid var(--card-border);
+      border-radius: var(--r-md);
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 550;
+      color: var(--text-muted);
+      transition: border-color .18s ease, background .18s ease;
+    }
+
+    .feature-pill:hover {
+      border-color: var(--p-border-muted);
+      background: var(--p-surface-highest);
+    }
+
+    .feature-pill svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: var(--action);
+    }
+
+    /* Stagger feature pills */
+    .feature-pill:nth-child(1) { animation: slideUp .4s .08s cubic-bezier(.22,.68,0,1.05) both; }
+    .feature-pill:nth-child(2) { animation: slideUp .4s .14s cubic-bezier(.22,.68,0,1.05) both; }
+    .feature-pill:nth-child(3) { animation: slideUp .4s .20s cubic-bezier(.22,.68,0,1.05) both; }
+    .feature-pill:nth-child(4) { animation: slideUp .4s .26s cubic-bezier(.22,.68,0,1.05) both; }
+
+    /* ─── Button system ──────────────────────────────────────────────── */
+    .btn-row {
+      display: flex;
+      gap: var(--sp-3);
+      margin-top: var(--sp-8);
+      flex-wrap: wrap;
+    }
+
+    .btn-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sp-2);
+      padding: 14px 28px;
+      border-radius: var(--r-md);
+      font-size: 14px;
+      font-weight: 650;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      transition: background .15s ease, box-shadow .15s ease, transform .1s ease, border-color .15s ease;
+      text-align: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .btn-primary {
+      background: var(--action);
+      color: var(--action-fg);
+      box-shadow: var(--shadow-btn);
+    }
+
+    .btn-primary:hover {
+      background: var(--action-hover);
+      box-shadow: var(--shadow-btn-hover);
+    }
+
+    .btn-secondary {
+      background: var(--p-surface-highest);
+      color: var(--text);
+      border: 1px solid var(--p-border-subtle);
+    }
+
+    .btn-secondary:hover {
+      background: var(--p-border-subtle);
+      border-color: var(--p-border-muted);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      padding: var(--sp-2) var(--sp-4);
+      border-radius: var(--r-sm);
+    }
+
+    .btn-ghost:hover { color: var(--text); }
+
+    .btn-ghost svg { width: 14px; height: 14px; }
+
+    /* ─── Phone Mockup ───────────────────────────────────────────────── */
+    .phone-mockup {
+      width: 280px;
+      height: 560px;
+      background: var(--p-surface);
+      border-radius: 36px;
+      border: 3px solid var(--p-border-subtle);
+      box-shadow: var(--shadow-phone);
+      position: relative;
+      overflow: hidden;
+      transform: rotate(2deg);
+      animation: phoneFloat 6s ease-in-out infinite, fadeUp .6s .15s cubic-bezier(.22,.68,0,1.05) both;
+    }
+
+    /* Status bar */
+    .phone-statusbar {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 24px;
+    }
+
+    .phone-notch {
+      width: 80px;
+      height: 24px;
+      background: #000;
+      border-radius: 0 0 16px 16px;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    /* App header */
+    .phone-header {
+      padding: 4px 20px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .phone-header-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .phone-header-icons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .phone-header-icons svg {
+      width: 18px;
+      height: 18px;
+      color: var(--text-muted);
+    }
+
+    /* Day chips */
+    .phone-chips {
+      display: flex;
+      gap: 6px;
+      padding: 0 16px 12px;
+      justify-content: center;
+    }
+
+    .phone-chip {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--p-border-subtle);
+      background: var(--p-surface-container);
+      color: var(--text-muted);
+    }
+
+    .phone-chip.active {
+      background: var(--action);
+      color: var(--action-fg);
+      border-color: var(--action);
+    }
+
+    /* Period cards inside phone */
+    .phone-cards {
+      padding: 0 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .phone-card {
+      background: var(--p-surface-container);
+      border: 1px solid var(--p-border-subtle);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .phone-card.active {
+      border-color: var(--action);
+      border-width: 1.5px;
+      background: rgba(212,147,13,0.06);
+    }
+
+    .phone-card.done {
+      opacity: 0.45;
+    }
+
+    .phone-card-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--p-surface-highest);
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .phone-card.active .phone-card-num {
+      background: var(--accent-surface);
+      color: var(--action);
+    }
+
+    .phone-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .phone-card-subject {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .phone-card.active .phone-card-subject {
+      color: var(--action);
+    }
+
+    .phone-card.done .phone-card-subject {
+      text-decoration: line-through;
+    }
+
+    .phone-card-time {
+      font-size: 11px;
+      color: var(--text-subtle);
+      margin-top: 2px;
+    }
+
+    .phone-card-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: var(--r-full);
+      flex-shrink: 0;
+    }
+
+    .phone-card-badge.ongoing {
+      background: var(--accent-surface);
+      color: var(--action);
+      border: 1px solid var(--accent-border);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .phone-card-badge.done-badge {
+      color: var(--text-subtle);
+    }
+
+    /* Pulsing dot */
+    .pulse-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--action);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* ─── Profile card (profile state) ───────────────────────────────── */
+    .profile-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: fadeUp .45s cubic-bezier(.22,.68,0,1.05) both;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 480px;
+      background-color: var(--card);
+      background-image: linear-gradient(160deg, rgba(255,255,255,0.025) 0%, transparent 55%);
+      border: 1px solid var(--card-border);
+      border-radius: var(--r-xl);
+      padding: var(--sp-10) var(--sp-6);
+      animation: fadeUp .4s cubic-bezier(.22,.68,0,1.05) both;
+    }
+
+    .card h1 {
+      font-size: 22px;
+      font-weight: 750;
+      font-variation-settings: 'opsz' 28;
+      color: #fff;
+      line-height: 1.25;
+      margin-top: var(--sp-3);
+      margin-bottom: var(--sp-1);
+      letter-spacing: -.3px;
+    }
+
+    .card .subtitle {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.55;
+      margin-bottom: var(--sp-6);
+      font-weight: 400;
+    }
+
+    /* ─── Slots list ─────────────────────────────────────────────────── */
+    .slots-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+      margin-bottom: var(--sp-6);
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: var(--sp-1);
+      scrollbar-width: thin;
+      scrollbar-color: var(--p-border-subtle) transparent;
+    }
+
+    .slots-container::-webkit-scrollbar { width: 4px; }
+    .slots-container::-webkit-scrollbar-thumb {
+      background: var(--p-border-subtle);
+      border-radius: var(--r-sm);
+    }
+
+    .slot-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--p-surface-highest);
+      border: 1px solid var(--p-border-subtle);
+      border-radius: var(--r-md);
+      padding: 12px 16px;
+      animation: slideUp .3s cubic-bezier(.22,.68,0,1.05) both;
+    }
+
+    .slot-row:nth-child(1)  { animation-delay: .04s; }
+    .slot-row:nth-child(2)  { animation-delay: .08s; }
+    .slot-row:nth-child(3)  { animation-delay: .12s; }
+    .slot-row:nth-child(4)  { animation-delay: .16s; }
+    .slot-row:nth-child(5)  { animation-delay: .20s; }
+    .slot-row:nth-child(6)  { animation-delay: .24s; }
+    .slot-row:nth-child(7)  { animation-delay: .28s; }
+    .slot-row:nth-child(8)  { animation-delay: .32s; }
+
+    .slot-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .slot-time {
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--action);
+      background: var(--accent-surface);
+      border: 1px solid var(--accent-border);
+      padding: 4px 10px;
+      border-radius: var(--r-sm);
+    }
+
+    /* ─── Tip box ────────────────────────────────────────────────────── */
+    .tip-box {
+      margin-top: var(--sp-4);
+      padding: var(--sp-4);
+      background: var(--p-surface);
+      border: 1px solid var(--p-border-subtle);
+      border-radius: var(--r-md);
+      font-size: 12px;
+      color: var(--text-subtle);
+      line-height: 1.6;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .tip-box svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      color: var(--text-subtle);
+    }
+
+    .tip-box strong { color: var(--text-muted); }
+    .tip-box code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      background: rgba(255,255,255,0.06);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    /* ─── Divider ────────────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--p-border-subtle), transparent);
+      margin: var(--sp-4) 0;
+    }
+
+    /* ─── Footer ─────────────────────────────────────────────────────── */
+    .footer {
+      text-align: center;
+      margin-top: var(--sp-12);
+      padding-bottom: var(--sp-6);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: .3px;
+      color: var(--text-subtle);
+    }
+
+    .footer a {
+      color: var(--text-muted);
+      transition: color .15s;
+    }
+
+    .footer a:hover { color: var(--action); }
+
+    /* ─── Toast ──────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: var(--sp-6);
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--p-surface-highest);
+      border: 1px solid var(--p-border-muted);
+      color: var(--text);
+      padding: 10px 20px;
+      border-radius: var(--r-full);
+      font-size: 13px;
+      font-weight: 550;
+      opacity: 0;
+      transition: opacity .22s ease, transform .22s cubic-bezier(.22,.68,0,1.05);
+      pointer-events: none;
+      z-index: 100;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ─── Loading state ──────────────────────────────────────────────── */
+    .loading-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+      animation: fadeUp .35s cubic-bezier(.22,.68,0,1.05) both;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2.5px solid var(--p-border-subtle);
+      border-top-color: var(--action);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin-bottom: var(--sp-6);
+    }
+
+    .loading-wrapper h1 {
+      font-size: 24px;
+      font-weight: 750;
+      color: #fff;
+      letter-spacing: -.3px;
+      margin-top: var(--sp-3);
+    }
+
+    .loading-wrapper .subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-top: var(--sp-1);
+    }
+
+    /* ─── Animations ─────────────────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: .4; transform: scale(1.3); }
+    }
+
+    @keyframes phoneFloat {
+      0%, 100% { transform: rotate(2deg) translateY(0); }
+      50%      { transform: rotate(2deg) translateY(-8px); }
+    }
+
+    /* ─── Reduced motion ─────────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .phone-mockup { transform: rotate(2deg); }
+    }
+
+    /* ─── Responsive — Mobile (<768px) ───────────────────────────────── */
+    @media (max-width: 767px) {
+      .page {
+        padding: var(--sp-10) var(--sp-5);
+        justify-content: flex-start;
+        padding-top: var(--sp-16);
+      }
+
+      .hero {
+        grid-template-columns: 1fr;
+        gap: var(--sp-10);
+      }
+
+      .hero-visual {
+        order: -1;
+      }
+
+      .phone-mockup {
+        width: 220px;
+        height: 440px;
+        border-radius: 28px;
+        transform: rotate(0deg);
+      }
+
+      .phone-mockup .phone-notch {
+        width: 64px;
+        height: 20px;
+        border-radius: 0 0 12px 12px;
+      }
+
+      .phone-statusbar { height: 36px; }
+      .phone-header { padding: 2px 14px 8px; }
+      .phone-header-title { font-size: 15px; }
+      .phone-chips { padding: 0 12px 8px; gap: 4px; }
+      .phone-chip { width: 30px; height: 30px; font-size: 10px; border-radius: 8px; }
+      .phone-cards { padding: 0 10px; gap: 6px; }
+      .phone-card { padding: 9px 11px; gap: 8px; border-radius: 10px; }
+      .phone-card-num { width: 26px; height: 26px; font-size: 11px; border-radius: 6px; }
+      .phone-card-subject { font-size: 12px; }
+      .phone-card-time { font-size: 10px; }
+      .phone-card-badge { font-size: 8px; padding: 2px 6px; }
+
+      @keyframes phoneFloat {
+        0%, 100% { transform: rotate(0deg) translateY(0); }
+        50%      { transform: rotate(0deg) translateY(-6px); }
+      }
+
+      .hero-headline {
+        font-size: clamp(30px, 8vw, 42px);
+        letter-spacing: -1px;
+      }
+
+      .hero-subtitle {
+        font-size: 15px;
+      }
+
+      .features {
+        margin-top: var(--sp-8);
+      }
+
+      .btn-row {
+        flex-direction: column;
+        margin-top: var(--sp-6);
+      }
+
+      .btn-row .btn {
+        width: 100%;
+      }
+
+      .card {
+        padding: var(--sp-8) var(--sp-5);
+      }
+
+      .footer {
+        margin-top: var(--sp-10);
+      }
+    }
+
+    /* ─── Large screens ──────────────────────────────────────────────── */
+    @media (min-width: 1200px) {
+      .hero {
+        gap: var(--sp-20);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- ── Loading state ──────────────────────────────────────────── -->
+    <div id="loadingState" class="loading-wrapper">
+      <div class="spinner"></div>
+      <div class="badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Jadwal Profile
+      </div>
+      <h1>Opening Jadwal…</h1>
+      <p class="subtitle">Looking for your timing profile.</p>
+    </div>
+
+    <!-- ── Profile state ──────────────────────────────────────────── -->
+    <div id="profileState" class="profile-wrapper" style="display:none;">
+      <div class="card">
+        <div class="badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Timing Profile
+        </div>
+        <h1 id="profileName">Schedule</h1>
+        <p class="subtitle" id="profileCount">0 periods loaded</p>
+
+        <div class="slots-container" id="slotsList"></div>
+
+        <div class="btn-stack">
+          <a class="btn btn-primary" id="openDirectBtn" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Open in Jadwal App
+          </a>
+          <a class="btn btn-secondary" id="openIntentBtn" href="#" style="font-size:13px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>
+            Launch via Android Intent
+          </a>
+          <button class="btn btn-secondary" id="copyCodeBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy Import Code
+          </button>
+          <a class="btn btn-ghost" href="https://github.com/Dariokisumo/Jadwal/releases/latest" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Don't have Jadwal? Download APK
+          </a>
+        </div>
+
+        <div class="tip-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>
+            <strong>One-tap open tip:</strong> In Android
+            <strong>Settings → Apps → Jadwal → Open by default → Add links</strong>,
+            enable <code>dariokisumo.github.io</code> so shared links open Jadwal directly.
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Home state ─────────────────────────────────────────────── -->
+    <div id="homeState" style="display:none;">
+      <div class="hero">
+        <div class="hero-content">
+          <div class="badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Jadwal
+          </div>
+
+          <h1 class="hero-headline">Your Timetable,<br><span class="accent">Always</span> On Time</h1>
+
+          <p class="hero-subtitle">Offline timetable tracker with live period status, home widget, and automatic notifications for Android.</p>
+
+          <div class="features">
+            <div class="feature-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+              Live Period Status
+            </div>
+            <div class="feature-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              Home Widget
+            </div>
+            <div class="feature-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              Auto Notifications
+            </div>
+            <div class="feature-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+              100% Offline
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <a class="btn btn-primary" href="https://github.com/Dariokisumo/Jadwal/releases/latest" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download Latest APK
+            </a>
+            <a class="btn btn-secondary" href="https://github.com/Dariokisumo/Jadwal" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+              View on GitHub
+            </a>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="phone-mockup" aria-hidden="true">
+            <div class="phone-notch"></div>
+            <div class="phone-statusbar"></div>
+            <div class="phone-header">
+              <span class="phone-header-title">Jadwal</span>
+              <div class="phone-header-icons">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+              </div>
+            </div>
+            <div class="phone-chips">
+              <div class="phone-chip">M</div>
+              <div class="phone-chip active">T</div>
+              <div class="phone-chip">W</div>
+              <div class="phone-chip">T</div>
+              <div class="phone-chip">S</div>
+            </div>
+            <div class="phone-cards">
+              <div class="phone-card done">
+                <div class="phone-card-num">1</div>
+                <div class="phone-card-info">
+                  <div class="phone-card-subject">Mathematics</div>
+                  <div class="phone-card-time">8:00 – 8:45 AM</div>
+                </div>
+                <span class="phone-card-badge done-badge">✓</span>
+              </div>
+              <div class="phone-card active">
+                <div class="phone-card-num">2</div>
+                <div class="phone-card-info">
+                  <div class="phone-card-subject">English</div>
+                  <div class="phone-card-time">8:45 – 9:30 AM</div>
+                </div>
+                <span class="phone-card-badge ongoing">
+                  <span class="pulse-dot"></span>
+                  ONGOING
+                </span>
+              </div>
+              <div class="phone-card">
+                <div class="phone-card-num">3</div>
+                <div class="phone-card-info">
+                  <div class="phone-card-subject">Physics</div>
+                  <div class="phone-card-time">9:30 – 10:15 AM</div>
+                </div>
+              </div>
+              <div class="phone-card">
+                <div class="phone-card-num">4</div>
+                <div class="phone-card-info">
+                  <div class="phone-card-subject">Chemistry</div>
+                  <div class="phone-card-time">10:30 – 11:15 AM</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">Jadwal &nbsp;·&nbsp; Offline Timetable Tracker &nbsp;·&nbsp; <a href="https://github.com/Dariokisumo/Jadwal" target="_blank" rel="noopener">GitHub</a></div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    function base64UrlToUint8Array(base64Url) {
+      let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      while (base64.length % 4 !== 0) base64 += '=';
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+
+    function formatMinutes(totalMin) {
+      const h = Math.floor(totalMin / 60) % 24;
+      const m = totalMin % 60;
+      const period = h >= 12 ? 'PM' : 'AM';
+      const hour12 = h % 12 || 12;
+      return `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
+    }
+
+    function parsePayload(raw) {
+      let bytes;
+      try { bytes = base64UrlToUint8Array(raw); } catch { return null; }
+
+      // Compact binary format: 'J', 'P', 0x01
+      if (bytes.length >= 5 && bytes[0] === 0x4A && bytes[1] === 0x50 && bytes[2] === 0x01) {
+        let offset = 3;
+        const nameLen = bytes[offset++];
+        const name = new TextDecoder().decode(bytes.slice(offset, offset + nameLen));
+        offset += nameLen;
+        const slotCount = bytes[offset++];
+        const slots = [];
+        for (let i = 0; i < slotCount; i++) {
+          const pNum = bytes[offset++];
+          const startMin = (bytes[offset++] << 8) | bytes[offset++];
+          const endMin   = (bytes[offset++] << 8) | bytes[offset++];
+          slots.push({ period: pNum, start: formatMinutes(startMin), end: formatMinutes(endMin) });
+        }
+        return { name: name || 'Schedule', slots };
+      }
+
+      // Fallback: UTF-8 JSON
+      try {
+        const json = JSON.parse(new TextDecoder().decode(bytes));
+        const slots = json.slots
+          ? Object.entries(json.slots).map(([p, t]) => ({ period: parseInt(p), start: t[0], end: t[1] }))
+          : [];
+        return { name: json.name || 'Schedule', slots };
+      } catch { return null; }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function getRawPayload() {
+      if (window.location.hash) {
+        let h = window.location.hash.substring(1);
+        if (h.startsWith('p/'))  h = h.substring(2);
+        if (h.startsWith('/p/')) h = h.substring(3);
+        if (h.startsWith('p#'))  h = h.substring(2);
+        if (h.startsWith('#'))   h = h.substring(1);
+        if (h) return h;
+      }
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('data')) return params.get('data');
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      if (parts.length >= 2 && parts[0] === 'p') return parts[1];
+      return null;
+    }
+
+    function init() {
+      const payload = getRawPayload();
+
+      if (!payload) {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('homeState').style.display = 'block';
+        return;
+      }
+
+      const profile = parsePayload(payload);
+      if (!profile || !profile.slots?.length) {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('homeState').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('profileName').textContent = profile.name;
+      document.getElementById('profileCount').textContent =
+        `${profile.slots.length} period${profile.slots.length !== 1 ? 's' : ''} loaded`;
+
+      const list = document.getElementById('slotsList');
+      list.innerHTML = '';
+      profile.slots.sort((a, b) => a.period - b.period).forEach(slot => {
+        const row = document.createElement('div');
+        row.className = 'slot-row';
+        row.innerHTML =
+          `<span class="slot-title">Period ${slot.period}</span>` +
+          `<span class="slot-time">${slot.start}&nbsp;–&nbsp;${slot.end}</span>`;
+        list.appendChild(row);
+      });
+
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('profileState').style.display = 'flex';
+
+      const enc = encodeURIComponent(payload);
+      const customSchemeUrl = `jadwal://profile?data=${enc}`;
+      const fallbackUrl = encodeURIComponent('https://github.com/Dariokisumo/Jadwal/releases/latest');
+      const intentUrl = `intent://profile/?data=${enc}#Intent;scheme=jadwal;package=com.example.jadwal;S.browser_fallback_url=${fallbackUrl};end`;
+
+      const openDirectBtn = document.getElementById('openDirectBtn');
+      openDirectBtn.href = customSchemeUrl;
+      openDirectBtn.addEventListener('click', () => { window.location.href = customSchemeUrl; });
+
+      document.getElementById('openIntentBtn').href = intentUrl;
+
+      document.getElementById('copyCodeBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(`JADWAL_PROFILE:${payload}`)
+          .then(() => showToast('Import code copied!'))
+          .catch(() => showToast('Failed to copy'));
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
