@@ -11,13 +11,17 @@ import '../constants/spacing.dart';
 import '../constants/timetable_prompt.dart';
 import '../constants/weekday_map.dart';
 import '../models/period_model.dart';
+import '../models/timing_profile.dart';
+import '../services/deep_link_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/update_service.dart';
 import '../services/widget_data_service.dart';
 import '../theme/relational_colors.dart';
 import '../widgets/break_indicator.dart';
+import '../widgets/day_chip.dart';
 import '../widgets/period_card.dart';
+import '../widgets/profile_import_dialog.dart';
 import '../widgets/theme_bottom_sheet.dart';
 import '../widgets/update_dialog.dart';
 import 'edit_timetable_screen.dart';
@@ -38,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedDayKey = '';
   bool _loading = true;
   Timer? _refreshTimer;
+  StreamSubscription<TimingProfile>? _deepLinkSub;
   PeriodStatus? _previousActiveStatus;
   late PageController _pageController;
   bool _permissionsMissing = false;
@@ -132,6 +137,11 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkSilentUpdate();
     });
+    _deepLinkSub = DeepLinkService.onProfileReceived.listen((profile) {
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        _handleImportedProfile(profile);
+      }
+    });
     _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       if (mounted) {
         _detectPeriodTransition();
@@ -142,6 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _deepLinkSub?.cancel();
     _refreshTimer?.cancel();
     _pageController.dispose();
     super.dispose();
@@ -449,11 +460,29 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openMisc() async {
-    final modified = await Navigator.of(context).push<bool>(
+    await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const MiscScreen()),
     );
-    if (modified == true && mounted) {
-      _loadTimetable();
+    if (mounted) {
+      await _loadTimetable();
+    }
+  }
+
+  Future<void> _handleImportedProfile(TimingProfile profile) async {
+    final confirmed = await ProfileImportDialog.show(context, profile: profile);
+    if (confirmed == true && mounted) {
+      final imported = await StorageService.importTimingProfile(profile);
+      HapticFeedback.mediumImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Added "${imported.name}" to saved profiles! Manage it in Misc > Period Timings.',
+            style: const TextStyle(fontFamily: 'Inter'),
+          ),
+          backgroundColor: context.relColors.surfaceContainer,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -709,7 +738,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: _allDaysInOrder.map((dayKey) {
-          return _DayChip(
+          return DayChip(
             dayKey: dayKey,
             label: kDayAbbreviations[dayKey] ?? dayKey.substring(0, 2),
             isSelected: dayKey == _selectedDayKey,
@@ -990,131 +1019,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _DayChip extends StatelessWidget {
-  final String dayKey;
-  final String label;
-  final bool isSelected;
-  final bool isToday;
-  final bool isFriday;
-  final VoidCallback onTap;
-  final RelationalColors colors;
 
-  const _DayChip({
-    required this.dayKey,
-    required this.label,
-    required this.isSelected,
-    required this.isToday,
-    required this.isFriday,
-    required this.onTap,
-    required this.colors,
-  });
 
-  @override
-  Widget build(BuildContext context) {
-    final chipColor = isFriday
-        ? colors.actionSubtle
-        : isSelected
-            ? colors.action
-            : isToday
-                ? colors.surface
-                : colors.surfaceContainerHighest;
 
-    final textColor = isFriday
-        ? colors.action.withValues(alpha: 0.6)
-        : isSelected
-            ? colors.onAction
-            : colors.textPrimary;
 
-    final borderColor = isFriday
-        ? colors.action.withValues(alpha: 0.2)
-        : isSelected
-            ? colors.action
-            : isToday
-                ? colors.action
-                : colors.borderSubtle;
-
-    final dayLabel = kDayLabels[dayKey] ?? dayKey;
-    final semanticsLabel = isFriday
-        ? '$dayLabel, no classes'
-        : '$dayLabel${isToday ? ', today' : ''}${isSelected ? ', selected' : ''}';
-
-    return Semantics(
-      label: semanticsLabel,
-      button: true,
-      enabled: !isFriday,
-      selected: isSelected,
-      child: GestureDetector(
-        onTap: isFriday ? null : onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: chipColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: borderColor,
-                  width: isSelected || isToday ? 1.5 : 1,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: isFriday
-                  ? Icon(
-                      Icons.coffee_rounded,
-                      size: 16,
-                      color: textColor,
-                    )
-                  : Text(
-                      label,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: textColor,
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 4),
-            if (isToday)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: CustomPaint(
-                  size: const Size(8, 5),
-                  painter: _TrianglePainter(color: colors.action),
-                ),
-              )
-            else
-              const SizedBox(height: 7),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TrianglePainter extends CustomPainter {
-  final Color color;
-
-  const _TrianglePainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    final path = Path()
-      ..moveTo(size.width / 2, size.height)
-      ..lineTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _TrianglePainter old) => old.color != color;
-}
 

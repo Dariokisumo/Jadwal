@@ -7,17 +7,44 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.jadwal/exact_alarm"
+    private var pendingDeepLink: String? = null
+    private var methodChannel: MethodChannel? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        handleDeepLink(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleDeepLink(intent)
+    }
+
+    private fun handleDeepLink(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            val data = intent.data
+            if (data != null && data.scheme == "jadwal") {
+                val url = data.toString()
+                pendingDeepLink = url
+                methodChannel?.invokeMethod("onDeepLink", url)
+            }
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+        val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        methodChannel = channel
+
+        channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "canScheduleExactAlarms" -> {
                     result.success(canScheduleExactAlarms())
@@ -39,11 +66,38 @@ class MainActivity: FlutterActivity() {
                 "getAppVersion" -> {
                     result.success(getAppVersion())
                 }
+                "getInitialDeepLink" -> {
+                    val link = pendingDeepLink
+                    pendingDeepLink = null
+                    result.success(link)
+                }
+                "shareText" -> {
+                    val text = call.argument<String>("text")
+                    val title = call.argument<String>("title") ?: "Share Timing Profile"
+                    if (text != null) {
+                        shareText(text, title)
+                        result.success(true)
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Text cannot be null", null)
+                    }
+                }
                 else -> {
                     result.notImplemented()
                 }
             }
         }
+    }
+
+    private fun shareText(text: String, title: String) {
+        try {
+            val sendIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_TEXT, text)
+                type = "text/plain"
+            }
+            val shareIntent = Intent.createChooser(sendIntent, title)
+            startActivity(shareIntent)
+        } catch (_: Exception) {}
     }
 
     private fun getDeviceArchitecture(): String {

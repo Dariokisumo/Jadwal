@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:flutter/services.dart';
+
 import '../constants/period_schedule.dart';
 
 /// A named timing profile (e.g. "Standard Schedule", "Winter Timing", "Exam Schedule").
@@ -26,6 +29,107 @@ class TimingProfile {
         'name': name,
         'slots': slots.map((k, v) => MapEntry(k.toString(), v)),
       };
+
+  /// Serializes this profile into a URL-safe base64 string.
+  String toSharePayload() {
+    final jsonStr = jsonEncode(toJson());
+    return base64Url.encode(utf8.encode(jsonStr));
+  }
+
+  /// Generates a human-friendly text summary with deep link and import code.
+  String toFormattedShareText() {
+    final payload = toSharePayload();
+    final sortedSlots = slots.keys.toList()..sort();
+    final count = sortedSlots.length;
+
+    final buffer = StringBuffer();
+    buffer.writeln('📅 Jadwal Timing Profile: "$name" ($count periods)\n');
+
+    for (final p in sortedSlots) {
+      final t = slots[p]!;
+      buffer.writeln('• Period $p: ${t[0]} – ${t[1]}');
+    }
+
+    buffer.writeln('\nOpen in Jadwal:');
+    buffer.writeln('jadwal://profile?data=$payload');
+    buffer.writeln('\nOr import code in Jadwal (Misc > Period Timings):');
+    buffer.writeln('JADWAL_PROFILE:$payload');
+
+    return buffer.toString();
+  }
+
+  /// Shares this profile via Android's native system share sheet.
+  static Future<void> share(TimingProfile profile) async {
+    try {
+      const channel = MethodChannel('com.jadwal/exact_alarm');
+      await channel.invokeMethod<bool>('shareText', {
+        'text': profile.toFormattedShareText(),
+        'title': 'Share Timing Profile',
+      });
+    } catch (_) {}
+  }
+
+  /// Parses a share payload, deep link URI, or raw JSON into a validated [TimingProfile].
+  static TimingProfile? fromSharePayload(String raw) {
+    try {
+      var cleaned = raw.trim();
+
+      // Extract substring if user pasted an entire message with multiple lines
+      if (cleaned.contains('jadwal://profile?data=')) {
+        final startIdx = cleaned.indexOf('jadwal://profile?data=');
+        final endIdx = cleaned.indexOf(RegExp(r'\s'), startIdx);
+        cleaned = endIdx == -1
+            ? cleaned.substring(startIdx)
+            : cleaned.substring(startIdx, endIdx);
+      } else if (cleaned.contains('JADWAL_PROFILE:')) {
+        final startIdx = cleaned.indexOf('JADWAL_PROFILE:');
+        final endIdx = cleaned.indexOf(RegExp(r'\s'), startIdx);
+        cleaned = endIdx == -1
+            ? cleaned.substring(startIdx)
+            : cleaned.substring(startIdx, endIdx);
+      }
+
+      // Extract from deep link URL: jadwal://profile?data=...
+      if (cleaned.startsWith('jadwal://')) {
+        final uri = Uri.tryParse(cleaned);
+        if (uri != null && uri.queryParameters.containsKey('data')) {
+          cleaned = uri.queryParameters['data']!;
+        }
+      }
+
+      // Extract from code format: JADWAL_PROFILE:...
+      if (cleaned.startsWith('JADWAL_PROFILE:')) {
+        cleaned = cleaned.substring('JADWAL_PROFILE:'.length).trim();
+      }
+
+      // First attempt: base64Url decode
+      Map<String, dynamic>? decodedJson;
+      try {
+        // Normalize base64 if needed
+        var normalized = cleaned;
+        while (normalized.length % 4 != 0) {
+          normalized += '=';
+        }
+        final bytes = base64Url.decode(normalized);
+        final jsonStr = utf8.decode(bytes);
+        decodedJson = jsonDecode(jsonStr) as Map<String, dynamic>?;
+      } catch (_) {
+        // Fallback: direct json parse
+        try {
+          decodedJson = jsonDecode(cleaned) as Map<String, dynamic>?;
+        } catch (_) {}
+      }
+
+      if (decodedJson == null) return null;
+
+      final profile = TimingProfile.fromJson(decodedJson);
+      if (profile.slots.isEmpty) return null;
+
+      return profile;
+    } catch (_) {
+      return null;
+    }
+  }
 
   factory TimingProfile.fromJson(Map<String, dynamic> json) {
     final rawSlots = json['slots'] as Map<String, dynamic>? ?? {};

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'screens/home_screen.dart';
 import 'screens/setup_screen.dart';
+import 'services/deep_link_service.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 import 'services/widget_data_service.dart';
@@ -21,6 +22,9 @@ const Map<String, Color> accentSeeds = {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize deep link handling early
+  DeepLinkService.init();
 
   try {
     await NotificationService.init();

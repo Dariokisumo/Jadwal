@@ -180,4 +180,25 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_activeProfileIdKey);
   }
+
+  static Future<TimingProfile> importTimingProfile(TimingProfile profile) async {
+    final profiles = await loadTimingProfiles();
+    
+    // Disambiguate name if already exists
+    var candidateName = profile.name;
+    var suffix = 1;
+    while (profiles.any((p) => p.name.toLowerCase() == candidateName.toLowerCase())) {
+      candidateName = '${profile.name} ($suffix)';
+      suffix++;
+    }
+
+    final imported = profile.copyWith(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: candidateName,
+    );
+
+    profiles.add(imported);
+    await saveTimingProfiles(profiles);
+    return imported;
+  }
 }

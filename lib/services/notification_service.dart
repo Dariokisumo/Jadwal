@@ -279,9 +279,14 @@ class NotificationService {
     final now = tz.TZDateTime.from(DateTime.now(), tz.local);
     const scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
 
+    final Map<String, dynamic> daysMap =
+        timetable.containsKey('timetable') && timetable['timetable'] is Map
+            ? (timetable['timetable'] as Map).cast<String, dynamic>()
+            : timetable;
+
     for (var dayIndex = 0; dayIndex < kDayKeys.length; dayIndex++) {
       final dayKey = kDayKeys[dayIndex];
-      final dayList = timetable[dayKey] as List? ?? [];
+      final dayList = daysMap[dayKey] as List? ?? [];
       if (dayList.isEmpty) continue;
 
       final weekday = _weekdayMap[dayKey];

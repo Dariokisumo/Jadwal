@@ -14,6 +14,7 @@ class MiscScreen extends StatefulWidget {
 
 class _MiscScreenState extends State<MiscScreen> {
   int _periodCount = 9;
+  String _activeProfileName = 'Default';
   bool _timetableModified = false;
   bool _loading = true;
 
@@ -25,9 +26,20 @@ class _MiscScreenState extends State<MiscScreen> {
 
   Future<void> _loadSettings() async {
     final count = await StorageService.loadPeriodCount();
+    final activeId = await StorageService.loadActiveProfileId();
+    final profiles = await StorageService.loadTimingProfiles();
+    String activeName = 'Default';
+    for (final p in profiles) {
+      if (p.id == activeId) {
+        activeName = p.name;
+        break;
+      }
+    }
+
     if (mounted) {
       setState(() {
         _periodCount = count;
+        _activeProfileName = activeName;
         _loading = false;
       });
     }
@@ -153,7 +165,10 @@ class _MiscScreenState extends State<MiscScreen> {
                   onPressed: () async {
                     Navigator.pop(ctx);
                     await StorageService.savePeriodCount(tempCount);
-                    setState(() => _periodCount = tempCount);
+                    setState(() {
+                      _periodCount = tempCount;
+                      _timetableModified = true;
+                    });
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: colors.action,
@@ -184,9 +199,10 @@ class _MiscScreenState extends State<MiscScreen> {
     final colors = context.relColors;
 
     return PopScope(
-      canPop: true,
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) return;
+        if (didPop) return;
+        Navigator.of(context).pop(_timetableModified);
       },
       child: Scaffold(
         backgroundColor: colors.surface,
@@ -230,7 +246,7 @@ class _MiscScreenState extends State<MiscScreen> {
                     icon: Icons.schedule_rounded,
                     title: 'Period Timings',
                     subtitle: 'Manage time slots, saved schedules & bulk update',
-                    trailingBadge: null,
+                    trailingBadge: _activeProfileName,
                     onTap: _openPeriodTimings,
                     colors: colors,
                   ),

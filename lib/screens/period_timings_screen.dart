@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -5,10 +6,13 @@ import 'package:intl/intl.dart';
 import '../constants/period_schedule.dart';
 import '../constants/spacing.dart';
 import '../models/timing_profile.dart';
+import '../services/deep_link_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/widget_data_service.dart';
 import '../theme/relational_colors.dart';
+import '../widgets/period_slot_card.dart';
+import '../widgets/profile_import_dialog.dart';
 
 class PeriodTimingsScreen extends StatefulWidget {
   const PeriodTimingsScreen({super.key});
@@ -25,6 +29,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
   String? _activeAppliedProfileId;
   bool _timetableModified = false;
   bool _hasUnsavedProfileChanges = false;
+  StreamSubscription<TimingProfile>? _deepLinkSub;
 
   TimingProfile get _currentProfile => _profiles[_selectedProfileIndex];
 
@@ -32,6 +37,163 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
   void initState() {
     super.initState();
     _loadData();
+    _deepLinkSub = DeepLinkService.onProfileReceived.listen((profile) {
+      if (mounted) {
+        _processIncomingProfile(profile);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _deepLinkSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _shareCurrentProfile() async {
+    HapticFeedback.lightImpact();
+    await TimingProfile.share(_currentProfile);
+  }
+
+  Future<void> _showImportDialog({String? initialText}) async {
+    final colors = context.relColors;
+    final controller = TextEditingController(text: initialText ?? '');
+
+    // If initial text is empty, check clipboard
+    if (controller.text.isEmpty) {
+      final clip = await Clipboard.getData('text/plain');
+      if (clip != null && clip.text != null && clip.text!.trim().isNotEmpty) {
+        final text = clip.text!.trim();
+        if (text.contains('jadwal://') ||
+            text.contains('JADWAL_PROFILE:') ||
+            text.startsWith('{')) {
+          controller.text = text;
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Import Timing Profile',
+          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Paste a shared Jadwal timing profile link or import code below:',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                color: colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: controller,
+              maxLines: 3,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                color: colors.textPrimary,
+              ),
+              decoration: InputDecoration(
+                hintText: 'jadwal://profile?data=... or JADWAL_PROFILE:...',
+                hintStyle: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: colors.borderMuted,
+                ),
+                filled: true,
+                fillColor: colors.surfaceContainer,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: colors.borderSubtle),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: TextButton.styleFrom(
+              foregroundColor: colors.textSecondary,
+              minimumSize: const Size(64, 44),
+            ),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+          ),
+          FilledButton(
+            onPressed: () {
+              final raw = controller.text.trim();
+              Navigator.pop(ctx);
+              if (raw.isNotEmpty) {
+                _processIncomingPayload(raw);
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.action,
+              foregroundColor: colors.onAction,
+              minimumSize: const Size(90, 44),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Inspect', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _processIncomingProfile(TimingProfile profile) async {
+    if (!mounted) return;
+
+    final confirmed = await ProfileImportDialog.show(context, profile: profile);
+    if (confirmed == true && mounted) {
+      final imported = await StorageService.importTimingProfile(profile);
+      setState(() {
+        _profiles.add(imported);
+        _selectedProfileIndex = _profiles.length - 1;
+        _hasUnsavedProfileChanges = true;
+      });
+
+      HapticFeedback.mediumImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Added "${imported.name}" to saved profiles!',
+            style: const TextStyle(fontFamily: 'Inter'),
+          ),
+          backgroundColor: context.relColors.surfaceContainer,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _processIncomingPayload(String payload) async {
+    final profile = TimingProfile.fromSharePayload(payload);
+    if (profile == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Could not parse timing profile from link or code.',
+              style: TextStyle(fontFamily: 'Inter'),
+            ),
+            backgroundColor: context.relColors.danger,
+          ),
+        );
+      }
+      return;
+    }
+    await _processIncomingProfile(profile);
   }
 
   Future<void> _loadData() async {
@@ -166,8 +328,10 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
     await StorageService.saveTimetable(timetableData);
     await StorageService.saveActiveProfileId(_currentProfile.id);
     await StorageService.saveTimingProfiles(_profiles);
-    await NotificationService.scheduleAll(timetableData);
-    await WidgetDataService.updateWidget();
+
+    // Run notifications & widget update asynchronously in background for instant UI response
+    unawaited(NotificationService.scheduleAll(updatedDays));
+    unawaited(WidgetDataService.updateWidget());
 
     if (mounted) {
       setState(() {
@@ -522,9 +686,10 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
     final colors = context.relColors;
 
     return PopScope(
-      canPop: true,
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) return;
+        if (didPop) return;
+        Navigator.of(context).pop(_timetableModified);
       },
       child: Scaffold(
         backgroundColor: colors.surface,
@@ -559,6 +724,11 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
             ],
           ),
           actions: [
+            IconButton(
+              icon: Icon(Icons.file_download_outlined, color: colors.action),
+              tooltip: 'Import Profile',
+              onPressed: () => _showImportDialog(),
+            ),
             IconButton(
               icon: Icon(Icons.add_rounded, color: colors.action),
               tooltip: 'New Profile',
@@ -692,6 +862,29 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
+                // Import Profile Chip
+                ActionChip(
+                  onPressed: () => _showImportDialog(),
+                  avatar: Icon(Icons.file_download_outlined, size: 16, color: colors.action),
+                  label: Text(
+                    'Import',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: colors.action,
+                    ),
+                  ),
+                  backgroundColor: colors.action.withValues(alpha: 0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(
+                      color: colors.action.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -713,42 +906,59 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
           ),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base, vertical: 6),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: isApplied
-                  ? colors.action.withValues(alpha: 0.12)
-                  : colors.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              isApplied ? '✓ In use in timetable' : 'Not applied',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: isApplied ? colors.action : colors.textSecondary,
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isApplied
+                    ? colors.action.withValues(alpha: 0.12)
+                    : colors.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                isApplied ? '✓ In use in timetable' : 'Saved profile',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isApplied ? colors.action : colors.textSecondary,
+                ),
               ),
             ),
           ),
-          const Spacer(),
+          const SizedBox(width: 8),
           IconButton(
-            icon: Icon(Icons.edit_outlined, size: 19, color: colors.textSecondary),
+            icon: Icon(Icons.share_rounded, size: 18, color: colors.action),
+            tooltip: 'Share Profile',
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            onPressed: _shareCurrentProfile,
+          ),
+          IconButton(
+            icon: Icon(Icons.edit_outlined, size: 18, color: colors.textSecondary),
             tooltip: 'Rename',
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             onPressed: _renameCurrentProfile,
           ),
           IconButton(
-            icon: Icon(Icons.copy_rounded, size: 18, color: colors.textSecondary),
+            icon: Icon(Icons.copy_rounded, size: 17, color: colors.textSecondary),
             tooltip: 'Duplicate',
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             onPressed: _duplicateCurrentProfile,
           ),
           if (_profiles.length > 1)
             IconButton(
-              icon: Icon(Icons.delete_outline_rounded, size: 19, color: colors.danger),
+              icon: Icon(Icons.delete_outline_rounded, size: 18, color: colors.danger),
               tooltip: 'Delete Profile',
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               onPressed: _deleteCurrentProfile,
             ),
         ],
@@ -770,19 +980,29 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
         final prevTimes = _currentProfile.getTimingFor(i - 1);
         final gap = _calculateGapMinutes(prevTimes[1], startTime);
         if (gap != null && gap > 0) {
-          slots.add(_buildBreakIndicator(gap, colors));
+          slots.add(BreakIndicatorRow(gapMinutes: gap, colors: colors));
         }
       }
 
-      slots.add(_buildPeriodSlotCard(pNum, startTime, endTime, colors));
+      slots.add(PeriodSlotCard(
+        periodNumber: pNum,
+        startTime: startTime,
+        endTime: endTime,
+        onStartTap: () => _pickTimeForPeriod(periodNumber: pNum, isStart: true),
+        onEndTap: () => _pickTimeForPeriod(periodNumber: pNum, isStart: false),
+        colors: colors,
+      ));
     }
 
     // Add Period Slot Control Buttons at bottom of list
     slots.add(
       Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.base),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.xs,
           children: [
             OutlinedButton.icon(
               onPressed: _addPeriodSlot,
@@ -794,8 +1014,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
-            if (_periodCount > 1) ...[
-              const SizedBox(width: AppSpacing.sm),
+            if (_periodCount > 1)
               TextButton.icon(
                 onPressed: _removeLastPeriodSlot,
                 icon: Icon(Icons.remove_rounded, size: 18, color: colors.danger),
@@ -804,7 +1023,6 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
                   style: TextStyle(color: colors.danger, fontFamily: 'Inter'),
                 ),
               ),
-            ],
           ],
         ),
       ),
@@ -813,194 +1031,6 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.base),
       children: slots,
-    );
-  }
-
-  Widget _buildPeriodSlotCard(
-    int periodNumber,
-    String startTime,
-    String endTime,
-    RelationalColors colors,
-  ) {
-    final duration = _calculateDurationMinutes(startTime, endTime);
-    final isValid = duration != null && duration > 0;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isValid ? colors.borderSubtle : colors.danger.withValues(alpha: 0.5),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          // Period Badge
-          Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: colors.action.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              'P$periodNumber',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: colors.action,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Start Time Button
-          Expanded(
-            child: _buildTimePickerChip(
-              timeStr: startTime,
-              onTap: () => _pickTimeForPeriod(periodNumber: periodNumber, isStart: true),
-              colors: colors,
-            ),
-          ),
-
-          // Arrow
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Icon(
-              Icons.arrow_forward_rounded,
-              size: 16,
-              color: colors.textSecondary.withValues(alpha: 0.6),
-            ),
-          ),
-
-          // End Time Button
-          Expanded(
-            child: _buildTimePickerChip(
-              timeStr: endTime,
-              onTap: () => _pickTimeForPeriod(periodNumber: periodNumber, isStart: false),
-              colors: colors,
-            ),
-          ),
-
-          const SizedBox(width: 10),
-
-          // Duration Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: isValid
-                  ? colors.surfaceContainerHighest
-                  : colors.danger.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              isValid ? '${duration}m' : 'Invalid',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: isValid ? colors.textSecondary : colors.danger,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimePickerChip({
-    required String timeStr,
-    required VoidCallback onTap,
-    required RelationalColors colors,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: colors.borderSubtle),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.access_time_rounded, size: 14, color: colors.textSecondary),
-            const SizedBox(width: 5),
-            Text(
-              timeStr,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: colors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBreakIndicator(int gapMinutes, RelationalColors colors) {
-    String label;
-    if (gapMinutes >= 35) {
-      label = '$gapMinutes min Lunch / Long Break';
-    } else if (gapMinutes >= 15) {
-      label = '$gapMinutes min Recess';
-    } else {
-      label = '$gapMinutes min Break';
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Divider(
-              color: colors.borderSubtle.withValues(alpha: 0.6),
-              thickness: 1,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.coffee_rounded, size: 13, color: colors.action),
-                  const SizedBox(width: 5),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            child: Divider(
-              color: colors.borderSubtle.withValues(alpha: 0.6),
-              thickness: 1,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1029,13 +1059,18 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
                     foregroundColor: colors.textPrimary,
                     side: BorderSide(color: colors.borderSubtle),
                     minimumSize: const Size.fromHeight(48),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Save Profile',
-                    style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Save Profile',
+                      maxLines: 1,
+                      style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ),
               ),
@@ -1045,18 +1080,23 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               child: FilledButton.icon(
                 onPressed: _applyToTimetable,
                 icon: const Icon(Icons.sync_rounded, size: 18),
-                label: const Text(
-                  'Apply to Timetable',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Apply to Timetable',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 style: FilledButton.styleFrom(
                   backgroundColor: colors.action,
                   foregroundColor: colors.onAction,
                   minimumSize: const Size.fromHeight(48),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1067,18 +1107,6 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
         ),
       ),
     );
-  }
-
-  int? _calculateDurationMinutes(String startStr, String endStr) {
-    try {
-      final format = DateFormat('h:mm a');
-      final s = format.parse(startStr.trim());
-      final e = format.parse(endStr.trim());
-      final diff = e.difference(s).inMinutes;
-      return diff;
-    } catch (_) {
-      return null;
-    }
   }
 
   int? _calculateGapMinutes(String endStr, String nextStartStr) {
