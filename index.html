@@ -10,91 +10,148 @@
   <meta property="og:url" content="https://dariokisumo.github.io">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&family=Newsreader:ital,opsz,wght@0,6..72,300..800;1,6..72,300..800&display=swap" rel="stylesheet">
   <style>
-    /* ─── Design Tokens (DESIGN.md aligned) ──────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════════════
+       JADWAL LANDING — Relational Design v2
+       Register: Utilitarian + Relational warmth
+       Tone: Refined dark, warm industrial
+       Memorable anchor: Amber aurora glow + serif/sans headline contrast
+       ═══════════════════════════════════════════════════════════════════ */
+
     :root {
-      /* Tier 1 — Primitives */
-      --p-amber:       #D4930D;
-      --p-amber-hover: #E5A41E;
-      --p-amber-12:    rgba(212,147,13,0.12);
-      --p-amber-20:    rgba(212,147,13,0.20);
-      --p-amber-06:    rgba(212,147,13,0.06);
+      /* ── Tier 1: Primitives ───────────────────────────── */
+      --p-amber:        #D4930D;
+      --p-amber-bright: #F0B429;
+      --p-amber-hover:  #E5A41E;
+      --p-amber-dim:    #A87208;
+      --p-amber-glow:   rgba(212,147,13,0.15);
+      --p-amber-10:     rgba(212,147,13,0.10);
+      --p-amber-06:     rgba(212,147,13,0.06);
+      --p-amber-20:     rgba(212,147,13,0.20);
 
-      --p-surface:          #1A1612;
-      --p-surface-container: #231F1A;
-      --p-surface-highest:  #2D2822;
-      --p-text:             #F5F2EB;
-      --p-text-secondary:   #B8B2A6;
-      --p-text-subtle:      #8A7E72;
-      --p-border-subtle:    #403A33;
-      --p-border-muted:     #665F56;
+      --p-srf-0:   #12100E;
+      --p-srf-1:   #1A1612;
+      --p-srf-2:   #231F1A;
+      --p-srf-3:   #2D2822;
+      --p-srf-4:   #3A342C;
 
-      /* Tier 2 — Semantic aliases */
-      --bg:             var(--p-surface);
-      --card:           var(--p-surface-container);
-      --card-border:    var(--p-border-subtle);
-      --text:           var(--p-text);
-      --text-muted:     var(--p-text-secondary);
-      --text-subtle:    var(--p-text-subtle);
+      --p-text-0:  #FEFCF8;
+      --p-text-1:  #F5F2EB;
+      --p-text-2:  #B8B2A6;
+      --p-text-3:  #8A7E72;
+      --p-text-4:  #665F56;
+
+      --p-brd-1:   #2D2822;
+      --p-brd-2:   #403A33;
+      --p-brd-3:   #665F56;
+
+      /* ── Tier 2: Semantic aliases ─────────────────────── */
+      --bg:             var(--p-srf-0);
+      --surface:        var(--p-srf-1);
+      --surface-raised: var(--p-srf-2);
+      --surface-high:   var(--p-srf-3);
+      --text:           var(--p-text-1);
+      --text-muted:     var(--p-text-2);
+      --text-subtle:    var(--p-text-3);
+      --text-dim:       var(--p-text-4);
       --action:         var(--p-amber);
       --action-hover:   var(--p-amber-hover);
-      --action-fg:      #1A1612;
-      --accent-surface: var(--p-amber-12);
+      --action-fg:      #141210;
+      --accent-glow:    var(--p-amber-glow);
+      --accent-surface: var(--p-amber-10);
       --accent-border:  var(--p-amber-20);
+      --border:         var(--p-brd-1);
+      --border-2:       var(--p-brd-2);
+      --border-3:       var(--p-brd-3);
 
-      /* Spacing (4px base) */
-      --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px;
-      --sp-4: 16px; --sp-5: 20px; --sp-6: 24px;
-      --sp-8: 32px; --sp-10: 40px; --sp-12: 48px;
-      --sp-16: 64px; --sp-20: 80px;
+      /* ── Spacing (8px base grid) ──────────────────────── */
+      --s-1: 4px;  --s-2: 8px;  --s-3: 12px;
+      --s-4: 16px; --s-5: 20px; --s-6: 24px;
+      --s-8: 32px; --s-10: 40px; --s-12: 48px;
+      --s-16: 64px; --s-20: 80px; --s-24: 96px;
 
-      /* Radius */
+      /* ── Radius ───────────────────────────────────────── */
       --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
-      --r-xl: 20px; --r-2xl: 24px; --r-full: 9999px;
-
-      /* Shadows */
-      --shadow-btn: 0 2px 12px rgba(212,147,13,0.25);
-      --shadow-btn-hover: 0 4px 20px rgba(212,147,13,0.35);
-      --shadow-slot: 0 1px 3px rgba(0,0,0,0.12);
-      --shadow-phone: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06) inset;
+      --r-xl: 20px; --r-2xl: 28px; --r-full: 9999px;
     }
 
-    /* ─── Reset ──────────────────────────────────────────────────────── */
+    /* ── Reset ───────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ─── Base ───────────────────────────────────────────────────────── */
+    /* ── Body + Atmosphere ──────────────────────────────── */
     body {
-      background-color: var(--bg);
-      background-image:
-        radial-gradient(ellipse 900px 500px at 50% -100px, rgba(212,147,13,0.07) 0%, transparent 70%),
-        radial-gradient(ellipse 500px 400px at 85% 100%, rgba(90,70,170,0.03) 0%, transparent 60%);
+      background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-weight: 450;
+      letter-spacing: 0.01em;
       font-optical-sizing: auto;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    /* Atmospheric glow layer — the amber aurora */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 50% -5%, rgba(212,147,13,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 60% at 80% 110%, rgba(90,60,150,0.04) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 30% at 20% 60%, rgba(212,147,13,0.03) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Subtle noise texture for depth */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 200px;
+      pointer-events: none;
+      z-index: 0;
     }
 
     a { text-decoration: none; color: inherit; }
 
-    /* ─── Page wrapper ───────────────────────────────────────────────── */
+    /* ── Page wrapper ──────────────────────────────────── */
     .page {
+      position: relative;
+      z-index: 1;
       width: 100%;
-      max-width: 1080px;
+      max-width: 1140px;
+      margin: 0 auto;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: var(--sp-12) var(--sp-6);
+      padding: var(--s-16) var(--s-8);
     }
 
-    /* ─── Badge ──────────────────────────────────────────────────────── */
-    .badge {
+    /* ══════════════════════════════════════════════════════
+       HERO — Home State
+       Split layout: text (55%) + visual (45%)
+       ══════════════════════════════════════════════════════ */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--s-16);
+      align-items: center;
+    }
+
+    .hero-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Chip badge ─────────────────────────────────────── */
+    .chip {
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -103,116 +160,108 @@
       color: var(--action);
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: .7px;
+      letter-spacing: .8px;
       text-transform: uppercase;
       padding: 5px 14px;
       border-radius: var(--r-full);
       width: fit-content;
+      animation: fadeIn .5s .05s ease both;
     }
 
-    .badge svg { width: 12px; height: 12px; flex-shrink: 0; }
+    .chip svg { width: 12px; height: 12px; flex-shrink: 0; }
 
-    /* ─── Typography ─────────────────────────────────────────────────── */
+    /* ── Headline — the typographic event ───────────────── */
     .hero-headline {
-      font-size: clamp(34px, 5vw, 60px);
+      margin-top: var(--s-8);
+      font-size: clamp(38px, 5.5vw, 68px);
       font-weight: 800;
       font-variation-settings: 'opsz' 48;
-      letter-spacing: -1.5px;
-      line-height: 1.08;
-      color: #fff;
-      margin-top: var(--sp-6);
+      letter-spacing: -2px;
+      line-height: 1.02;
+      color: var(--p-text-0);
+      animation: fadeUp .6s .1s cubic-bezier(.16,.9,.4,1) both;
     }
 
-    .hero-headline .accent { color: var(--action); }
+    /* The serif italic accent — the memorable anchor */
+    .hero-headline em {
+      font-family: 'Newsreader', Georgia, serif;
+      font-style: italic;
+      font-weight: 500;
+      font-variation-settings: 'opsz' 72;
+      color: var(--action);
+      letter-spacing: 0px;
+    }
 
-    .hero-subtitle {
+    .hero-sub {
+      margin-top: var(--s-6);
       color: var(--text-muted);
-      font-size: clamp(15px, 1.6vw, 18px);
-      line-height: 1.6;
-      max-width: 480px;
+      font-size: clamp(15px, 1.5vw, 17px);
+      line-height: 1.65;
+      max-width: 440px;
       font-weight: 400;
-      margin-top: var(--sp-3);
+      animation: fadeUp .6s .18s cubic-bezier(.16,.9,.4,1) both;
     }
 
-    /* ─── Hero layout (home state — two-column) ──────────────────────── */
-    .hero {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--sp-16);
-      align-items: center;
-      animation: fadeUp .5s cubic-bezier(.22,.68,0,1.05) both;
-    }
-
-    .hero-content {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .hero-visual {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    /* ─── Features grid ──────────────────────────────────────────────── */
+    /* ── Features — bento pills ────────────────────────── */
     .features {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: var(--sp-2);
-      margin-top: var(--sp-10);
+      gap: var(--s-2);
+      margin-top: var(--s-10);
+      animation: fadeUp .5s .26s cubic-bezier(.16,.9,.4,1) both;
     }
 
-    .feature-pill {
+    .feat {
       display: flex;
       align-items: center;
-      gap: var(--sp-2);
-      background: var(--p-surface-container);
-      border: 1px solid var(--card-border);
+      gap: var(--s-3);
+      padding: var(--s-4) var(--s-4);
       border-radius: var(--r-md);
-      padding: 12px 16px;
       font-size: 13px;
       font-weight: 550;
       color: var(--text-muted);
-      transition: border-color .18s ease, background .18s ease;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      transition: border-color .2s, background .2s, color .2s, transform .2s;
     }
 
-    .feature-pill:hover {
-      border-color: var(--p-border-muted);
-      background: var(--p-surface-highest);
+    .feat:hover {
+      border-color: rgba(212,147,13,0.25);
+      color: var(--text);
+      background: var(--surface-raised);
+      transform: translateY(-1px);
     }
 
-    .feature-pill svg {
+    .feat-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--r-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent-surface);
+      flex-shrink: 0;
+    }
+
+    .feat-icon svg {
       width: 16px;
       height: 16px;
-      flex-shrink: 0;
       color: var(--action);
     }
 
-    /* Stagger feature pills */
-    .feature-pill:nth-child(1) { animation: slideUp .4s .08s cubic-bezier(.22,.68,0,1.05) both; }
-    .feature-pill:nth-child(2) { animation: slideUp .4s .14s cubic-bezier(.22,.68,0,1.05) both; }
-    .feature-pill:nth-child(3) { animation: slideUp .4s .20s cubic-bezier(.22,.68,0,1.05) both; }
-    .feature-pill:nth-child(4) { animation: slideUp .4s .26s cubic-bezier(.22,.68,0,1.05) both; }
-
-    /* ─── Button system ──────────────────────────────────────────────── */
-    .btn-row {
+    /* ── CTA buttons ───────────────────────────────────── */
+    .cta-row {
       display: flex;
-      gap: var(--sp-3);
-      margin-top: var(--sp-8);
-      flex-wrap: wrap;
-    }
-
-    .btn-stack {
-      display: flex;
-      flex-direction: column;
-      gap: var(--sp-2);
+      gap: var(--s-3);
+      margin-top: var(--s-10);
+      animation: fadeUp .5s .34s cubic-bezier(.16,.9,.4,1) both;
     }
 
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: var(--sp-2);
+      gap: var(--s-2);
       padding: 14px 28px;
       border-radius: var(--r-md);
       font-size: 14px;
@@ -220,35 +269,35 @@
       font-family: inherit;
       cursor: pointer;
       border: none;
-      transition: background .15s ease, box-shadow .15s ease, transform .1s ease, border-color .15s ease;
-      text-align: center;
+      transition: all .18s ease;
       -webkit-tap-highlight-color: transparent;
     }
 
-    .btn:active { transform: scale(0.98); }
-
+    .btn:active { transform: scale(0.97); }
     .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
 
     .btn-primary {
       background: var(--action);
       color: var(--action-fg);
-      box-shadow: var(--shadow-btn);
+      box-shadow: 0 2px 16px rgba(212,147,13,0.30), 0 0 0 1px rgba(212,147,13,0.15) inset;
     }
 
     .btn-primary:hover {
       background: var(--action-hover);
-      box-shadow: var(--shadow-btn-hover);
+      box-shadow: 0 4px 24px rgba(212,147,13,0.40), 0 0 0 1px rgba(255,255,255,0.1) inset;
+      transform: translateY(-1px);
     }
 
     .btn-secondary {
-      background: var(--p-surface-highest);
+      background: var(--surface-raised);
       color: var(--text);
-      border: 1px solid var(--p-border-subtle);
+      border: 1px solid var(--border-2);
     }
 
     .btn-secondary:hover {
-      background: var(--p-border-subtle);
-      border-color: var(--p-border-muted);
+      background: var(--surface-high);
+      border-color: var(--border-3);
+      transform: translateY(-1px);
     }
 
     .btn-ghost {
@@ -256,155 +305,206 @@
       color: var(--text-muted);
       font-size: 13px;
       font-weight: 500;
-      padding: var(--sp-2) var(--sp-4);
-      border-radius: var(--r-sm);
+      padding: var(--s-2) var(--s-4);
     }
 
     .btn-ghost:hover { color: var(--text); }
-
     .btn-ghost svg { width: 14px; height: 14px; }
 
-    /* ─── Phone Mockup ───────────────────────────────────────────────── */
-    .phone-mockup {
-      width: 280px;
-      height: 560px;
-      background: var(--p-surface);
-      border-radius: 36px;
-      border: 3px solid var(--p-border-subtle);
-      box-shadow: var(--shadow-phone);
+    .btn-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s-2);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       PHONE MOCKUP — the hero visual
+       Realistic depth with layered shadows + screen shine
+       ══════════════════════════════════════════════════════ */
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      animation: fadeUp .7s .2s cubic-bezier(.16,.9,.4,1) both;
+    }
+
+    .phone-scene {
+      position: relative;
+      perspective: 1200px;
+    }
+
+    /* Ambient glow behind phone */
+    .phone-scene::before {
+      content: '';
+      position: absolute;
+      width: 220%;
+      height: 220%;
+      top: -60%;
+      left: -60%;
+      background: radial-gradient(ellipse 35% 40% at 50% 50%, rgba(212,147,13,0.12) 0%, rgba(212,147,13,0.04) 40%, transparent 70%);
+      filter: blur(40px);
+      pointer-events: none;
+      animation: glowPulse 4s ease-in-out infinite;
+    }
+
+    .phone {
+      width: 260px;
+      height: 530px;
+      background: var(--p-srf-1);
+      border-radius: 40px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
       position: relative;
       overflow: hidden;
-      transform: rotate(2deg);
-      animation: phoneFloat 6s ease-in-out infinite, fadeUp .6s .15s cubic-bezier(.22,.68,0,1.05) both;
+      transform: rotateY(-4deg) rotateX(2deg);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.06) inset,
+        0 0 0 2px rgba(255,248,235,0.06),
+        0 4px 8px rgba(0,0,0,0.25),
+        0 16px 32px rgba(0,0,0,0.4),
+        0 32px 80px rgba(0,0,0,0.5);
+      animation: phoneIdle 8s ease-in-out infinite;
     }
 
-    /* Status bar */
-    .phone-statusbar {
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 24px;
-    }
-
-    .phone-notch {
-      width: 80px;
-      height: 24px;
-      background: #000;
-      border-radius: 0 0 16px 16px;
+    /* Glass reflection stripe — more visible */
+    .phone::before {
+      content: '';
       position: absolute;
-      top: 0;
+      inset: 0;
+      background: linear-gradient(
+        130deg,
+        rgba(255,255,255,0.09) 0%,
+        rgba(255,255,255,0.03) 25%,
+        transparent 45%,
+        transparent 65%,
+        rgba(255,255,255,0.015) 100%
+      );
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Dynamic island */
+    .phone-island {
+      width: 90px;
+      height: 26px;
+      background: #000;
+      border-radius: 20px;
+      position: absolute;
+      top: 10px;
       left: 50%;
       transform: translateX(-50%);
+      z-index: 5;
     }
 
-    /* App header */
-    .phone-header {
-      padding: 4px 20px 12px;
+    .phone-status {
+      height: 48px;
+    }
+
+    /* App bar */
+    .ph-bar {
+      padding: 2px 18px 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
 
-    .phone-header-title {
-      font-size: 18px;
+    .ph-bar-title {
+      font-size: 17px;
       font-weight: 700;
       color: var(--text);
     }
 
-    .phone-header-icons {
+    .ph-bar-icons {
       display: flex;
-      gap: 12px;
+      gap: 10px;
     }
 
-    .phone-header-icons svg {
-      width: 18px;
-      height: 18px;
-      color: var(--text-muted);
+    .ph-bar-icons svg {
+      width: 16px;
+      height: 16px;
+      color: var(--text-subtle);
     }
 
     /* Day chips */
-    .phone-chips {
+    .ph-days {
       display: flex;
-      gap: 6px;
-      padding: 0 16px 12px;
+      gap: 5px;
+      padding: 0 14px 10px;
       justify-content: center;
     }
 
-    .phone-chip {
-      width: 36px;
-      height: 36px;
+    .ph-day {
+      width: 34px;
+      height: 34px;
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 11px;
       font-weight: 600;
-      border: 1px solid var(--p-border-subtle);
-      background: var(--p-surface-container);
-      color: var(--text-muted);
+      border: 1px solid var(--border);
+      background: var(--surface-raised);
+      color: var(--text-subtle);
     }
 
-    .phone-chip.active {
+    .ph-day.now {
       background: var(--action);
       color: var(--action-fg);
       border-color: var(--action);
+      font-weight: 700;
     }
 
-    /* Period cards inside phone */
-    .phone-cards {
-      padding: 0 14px;
+    /* Period cards */
+    .ph-list {
+      padding: 0 12px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 7px;
     }
 
-    .phone-card {
-      background: var(--p-surface-container);
-      border: 1px solid var(--p-border-subtle);
+    .ph-card {
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 12px 14px;
+      padding: 11px 12px;
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
-    .phone-card.active {
+    .ph-card.live {
       border-color: var(--action);
       border-width: 1.5px;
-      background: rgba(212,147,13,0.06);
+      background: var(--p-amber-06);
+      box-shadow: 0 0 24px rgba(212,147,13,0.12), 0 0 0 1px rgba(212,147,13,0.08) inset;
     }
 
-    .phone-card.done {
-      opacity: 0.45;
-    }
+    .ph-card.past { opacity: 0.38; }
 
-    .phone-card-num {
-      width: 32px;
-      height: 32px;
+    .ph-num {
+      width: 30px;
+      height: 30px;
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 12px;
       font-weight: 700;
-      background: var(--p-surface-highest);
-      color: var(--text-muted);
+      background: var(--surface-high);
+      color: var(--text-subtle);
       flex-shrink: 0;
     }
 
-    .phone-card.active .phone-card-num {
+    .ph-card.live .ph-num {
       background: var(--accent-surface);
       color: var(--action);
     }
 
-    .phone-card-info {
-      flex: 1;
-      min-width: 0;
-    }
+    .ph-info { flex: 1; min-width: 0; }
 
-    .phone-card-subject {
-      font-size: 13px;
+    .ph-subj {
+      font-size: 12.5px;
       font-weight: 600;
       color: var(--text);
       white-space: nowrap;
@@ -412,31 +512,27 @@
       text-overflow: ellipsis;
     }
 
-    .phone-card.active .phone-card-subject {
-      color: var(--action);
-    }
+    .ph-card.live .ph-subj { color: var(--action); }
+    .ph-card.past .ph-subj { text-decoration: line-through; color: var(--text-subtle); }
 
-    .phone-card.done .phone-card-subject {
-      text-decoration: line-through;
-    }
-
-    .phone-card-time {
-      font-size: 11px;
+    .ph-time {
+      font-size: 10.5px;
       color: var(--text-subtle);
-      margin-top: 2px;
+      margin-top: 1px;
+      font-variant-numeric: tabular-nums;
     }
 
-    .phone-card-badge {
-      font-size: 9px;
+    .ph-tag {
+      font-size: 8.5px;
       font-weight: 700;
       letter-spacing: 0.5px;
       text-transform: uppercase;
-      padding: 3px 8px;
+      padding: 3px 7px;
       border-radius: var(--r-full);
       flex-shrink: 0;
     }
 
-    .phone-card-badge.ongoing {
+    .ph-tag.on {
       background: var(--accent-surface);
       color: var(--action);
       border: 1px solid var(--accent-border);
@@ -445,12 +541,9 @@
       gap: 4px;
     }
 
-    .phone-card-badge.done-badge {
-      color: var(--text-subtle);
-    }
+    .ph-tag.dn { color: var(--text-dim); font-size: 11px; }
 
-    /* Pulsing dot */
-    .pulse-dot {
+    .dot {
       width: 5px;
       height: 5px;
       border-radius: 50%;
@@ -458,84 +551,95 @@
       animation: pulse 2s ease-in-out infinite;
     }
 
-    /* ─── Profile card (profile state) ───────────────────────────────── */
-    .profile-wrapper {
+    /* ══════════════════════════════════════════════════════
+       PROFILE STATE — centered card
+       ══════════════════════════════════════════════════════ */
+    .profile-wrap {
       display: flex;
       flex-direction: column;
       align-items: center;
-      animation: fadeUp .45s cubic-bezier(.22,.68,0,1.05) both;
     }
 
     .card {
       width: 100%;
-      max-width: 480px;
-      background-color: var(--card);
-      background-image: linear-gradient(160deg, rgba(255,255,255,0.025) 0%, transparent 55%);
-      border: 1px solid var(--card-border);
-      border-radius: var(--r-xl);
-      padding: var(--sp-10) var(--sp-6);
-      animation: fadeUp .4s cubic-bezier(.22,.68,0,1.05) both;
+      max-width: 460px;
+      background: var(--surface);
+      border: 1px solid rgba(255,248,235,0.07);
+      border-radius: var(--r-2xl);
+      padding: var(--s-10) var(--s-6);
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03) inset,
+        0 12px 32px -8px rgba(0,0,0,0.5);
+      animation: fadeUp .45s cubic-bezier(.16,.9,.4,1) both;
+    }
+
+    /* Subtle top shine on card */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 120px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 100%);
+      pointer-events: none;
     }
 
     .card h1 {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 750;
       font-variation-settings: 'opsz' 28;
-      color: #fff;
+      color: var(--p-text-0);
       line-height: 1.25;
-      margin-top: var(--sp-3);
-      margin-bottom: var(--sp-1);
-      letter-spacing: -.3px;
+      margin-top: var(--s-3);
+      letter-spacing: -.4px;
+      position: relative;
     }
 
-    .card .subtitle {
+    .card .sub {
       color: var(--text-muted);
       font-size: 14px;
-      line-height: 1.55;
-      margin-bottom: var(--sp-6);
-      font-weight: 400;
+      line-height: 1.5;
+      margin-top: var(--s-1);
+      margin-bottom: var(--s-6);
     }
 
-    /* ─── Slots list ─────────────────────────────────────────────────── */
-    .slots-container {
+    /* Slots */
+    .slots {
       display: flex;
       flex-direction: column;
-      gap: var(--sp-2);
-      margin-bottom: var(--sp-6);
+      gap: var(--s-2);
+      margin-bottom: var(--s-6);
       max-height: 300px;
       overflow-y: auto;
-      padding-right: var(--sp-1);
       scrollbar-width: thin;
-      scrollbar-color: var(--p-border-subtle) transparent;
+      scrollbar-color: var(--border-2) transparent;
     }
 
-    .slots-container::-webkit-scrollbar { width: 4px; }
-    .slots-container::-webkit-scrollbar-thumb {
-      background: var(--p-border-subtle);
-      border-radius: var(--r-sm);
-    }
+    .slots::-webkit-scrollbar { width: 4px; }
+    .slots::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 4px; }
 
-    .slot-row {
+    .slot {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: var(--p-surface-highest);
-      border: 1px solid var(--p-border-subtle);
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
       border-radius: var(--r-md);
       padding: 12px 16px;
-      animation: slideUp .3s cubic-bezier(.22,.68,0,1.05) both;
+      animation: slideUp .28s cubic-bezier(.16,.9,.4,1) both;
     }
 
-    .slot-row:nth-child(1)  { animation-delay: .04s; }
-    .slot-row:nth-child(2)  { animation-delay: .08s; }
-    .slot-row:nth-child(3)  { animation-delay: .12s; }
-    .slot-row:nth-child(4)  { animation-delay: .16s; }
-    .slot-row:nth-child(5)  { animation-delay: .20s; }
-    .slot-row:nth-child(6)  { animation-delay: .24s; }
-    .slot-row:nth-child(7)  { animation-delay: .28s; }
-    .slot-row:nth-child(8)  { animation-delay: .32s; }
+    .slot:nth-child(1) { animation-delay: .04s; }
+    .slot:nth-child(2) { animation-delay: .08s; }
+    .slot:nth-child(3) { animation-delay: .12s; }
+    .slot:nth-child(4) { animation-delay: .16s; }
+    .slot:nth-child(5) { animation-delay: .20s; }
+    .slot:nth-child(6) { animation-delay: .24s; }
+    .slot:nth-child(7) { animation-delay: .28s; }
+    .slot:nth-child(8) { animation-delay: .32s; }
 
-    .slot-title {
+    .slot-name {
       font-size: 13.5px;
       font-weight: 600;
       color: var(--text);
@@ -552,78 +656,100 @@
       border-radius: var(--r-sm);
     }
 
-    /* ─── Tip box ────────────────────────────────────────────────────── */
-    .tip-box {
-      margin-top: var(--sp-4);
-      padding: var(--sp-4);
-      background: var(--p-surface);
-      border: 1px solid var(--p-border-subtle);
+    /* Tip */
+    .tip {
+      margin-top: var(--s-4);
+      padding: var(--s-4);
+      background: var(--p-srf-0);
+      border: 1px solid var(--border);
       border-radius: var(--r-md);
       font-size: 12px;
-      color: var(--text-subtle);
+      color: var(--text-dim);
       line-height: 1.6;
       display: flex;
       gap: 10px;
-      align-items: flex-start;
     }
 
-    .tip-box svg {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
-      margin-top: 1px;
-      color: var(--text-subtle);
-    }
-
-    .tip-box strong { color: var(--text-muted); }
-    .tip-box code {
+    .tip svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; color: var(--text-dim); }
+    .tip strong { color: var(--text-muted); }
+    .tip code {
       font-family: 'SF Mono', 'Fira Code', monospace;
-      background: rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.05);
       padding: 1px 5px;
       border-radius: 4px;
       font-size: 11px;
     }
 
-    /* ─── Divider ────────────────────────────────────────────────────── */
-    .divider {
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--p-border-subtle), transparent);
-      margin: var(--sp-4) 0;
+    /* ══════════════════════════════════════════════════════
+       LOADING STATE
+       ══════════════════════════════════════════════════════ */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+      animation: fadeIn .35s ease both;
     }
 
-    /* ─── Footer ─────────────────────────────────────────────────────── */
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 2.5px solid var(--border-2);
+      border-top-color: var(--action);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin-bottom: var(--s-8);
+    }
+
+    .loading h1 {
+      font-size: 24px;
+      font-weight: 750;
+      color: var(--p-text-0);
+      letter-spacing: -.3px;
+      margin-top: var(--s-3);
+    }
+
+    .loading .sub {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-top: var(--s-1);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       FOOTER
+       ══════════════════════════════════════════════════════ */
     .footer {
       text-align: center;
-      margin-top: var(--sp-12);
-      padding-bottom: var(--sp-6);
+      margin-top: var(--s-20);
+      padding-bottom: var(--s-8);
       font-size: 12px;
       font-weight: 500;
-      letter-spacing: .3px;
-      color: var(--text-subtle);
+      color: var(--text-dim);
+      letter-spacing: .2px;
     }
 
-    .footer a {
-      color: var(--text-muted);
-      transition: color .15s;
-    }
-
+    .footer a { color: var(--text-subtle); transition: color .15s; }
     .footer a:hover { color: var(--action); }
 
-    /* ─── Toast ──────────────────────────────────────────────────────── */
+    /* ══════════════════════════════════════════════════════
+       TOAST
+       ══════════════════════════════════════════════════════ */
     .toast {
       position: fixed;
-      bottom: var(--sp-6);
+      bottom: var(--s-6);
       left: 50%;
       transform: translateX(-50%) translateY(12px);
-      background: var(--p-surface-highest);
-      border: 1px solid var(--p-border-muted);
+      background: var(--surface-high);
+      border: 1px solid var(--border-3);
       color: var(--text);
       padding: 10px 20px;
       border-radius: var(--r-full);
       font-size: 13px;
       font-weight: 550;
       opacity: 0;
-      transition: opacity .22s ease, transform .22s cubic-bezier(.22,.68,0,1.05);
+      transition: opacity .22s ease, transform .22s cubic-bezier(.16,.9,.4,1);
       pointer-events: none;
       z-index: 100;
       white-space: nowrap;
@@ -634,44 +760,16 @@
       transform: translateX(-50%) translateY(0);
     }
 
-    /* ─── Loading state ──────────────────────────────────────────────── */
-    .loading-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 60vh;
-      text-align: center;
-      animation: fadeUp .35s cubic-bezier(.22,.68,0,1.05) both;
+    /* ══════════════════════════════════════════════════════
+       ANIMATIONS
+       ══════════════════════════════════════════════════════ */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
     }
 
-    .spinner {
-      width: 24px;
-      height: 24px;
-      border: 2.5px solid var(--p-border-subtle);
-      border-top-color: var(--action);
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      margin-bottom: var(--sp-6);
-    }
-
-    .loading-wrapper h1 {
-      font-size: 24px;
-      font-weight: 750;
-      color: #fff;
-      letter-spacing: -.3px;
-      margin-top: var(--sp-3);
-    }
-
-    .loading-wrapper .subtitle {
-      color: var(--text-muted);
-      font-size: 15px;
-      margin-top: var(--sp-1);
-    }
-
-    /* ─── Animations ─────────────────────────────────────────────────── */
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
+      from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
@@ -683,136 +781,121 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%      { opacity: .4; transform: scale(1.3); }
+      0%, 100% { opacity: 1; }
+      50%      { opacity: .3; }
     }
 
-    @keyframes phoneFloat {
-      0%, 100% { transform: rotate(2deg) translateY(0); }
-      50%      { transform: rotate(2deg) translateY(-8px); }
+    @keyframes phoneIdle {
+      0%, 100% { transform: rotateY(-4deg) rotateX(2deg) translateY(0); }
+      50%      { transform: rotateY(-4deg) rotateX(2deg) translateY(-6px); }
     }
 
-    /* ─── Reduced motion ─────────────────────────────────────────────── */
+    @keyframes glowPulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: .6; }
+    }
+
+    /* ── Reduced motion ────────────────────────────────── */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
       }
-      .phone-mockup { transform: rotate(2deg); }
     }
 
-    /* ─── Responsive — Mobile (<768px) ───────────────────────────────── */
+    /* ══════════════════════════════════════════════════════
+       RESPONSIVE — Mobile (<768px)
+       ══════════════════════════════════════════════════════ */
     @media (max-width: 767px) {
-      .page {
-        padding: var(--sp-10) var(--sp-5);
-        justify-content: flex-start;
-        padding-top: var(--sp-16);
-      }
+      .page { padding: var(--s-12) var(--s-5); justify-content: flex-start; }
 
       .hero {
         grid-template-columns: 1fr;
-        gap: var(--sp-10);
+        gap: var(--s-12);
+        text-align: center;
       }
 
-      .hero-visual {
-        order: -1;
-      }
-
-      .phone-mockup {
-        width: 220px;
-        height: 440px;
-        border-radius: 28px;
-        transform: rotate(0deg);
-      }
-
-      .phone-mockup .phone-notch {
-        width: 64px;
-        height: 20px;
-        border-radius: 0 0 12px 12px;
-      }
-
-      .phone-statusbar { height: 36px; }
-      .phone-header { padding: 2px 14px 8px; }
-      .phone-header-title { font-size: 15px; }
-      .phone-chips { padding: 0 12px 8px; gap: 4px; }
-      .phone-chip { width: 30px; height: 30px; font-size: 10px; border-radius: 8px; }
-      .phone-cards { padding: 0 10px; gap: 6px; }
-      .phone-card { padding: 9px 11px; gap: 8px; border-radius: 10px; }
-      .phone-card-num { width: 26px; height: 26px; font-size: 11px; border-radius: 6px; }
-      .phone-card-subject { font-size: 12px; }
-      .phone-card-time { font-size: 10px; }
-      .phone-card-badge { font-size: 8px; padding: 2px 6px; }
-
-      @keyframes phoneFloat {
-        0%, 100% { transform: rotate(0deg) translateY(0); }
-        50%      { transform: rotate(0deg) translateY(-6px); }
-      }
+      .hero-content { align-items: center; }
+      .hero-visual { order: -1; }
+      .hero-sub { max-width: 100%; }
 
       .hero-headline {
-        font-size: clamp(30px, 8vw, 42px);
-        letter-spacing: -1px;
+        font-size: clamp(32px, 9vw, 48px);
+        letter-spacing: -1.2px;
       }
 
-      .hero-subtitle {
-        font-size: 15px;
-      }
+      .features { margin-top: var(--s-8); }
 
-      .features {
-        margin-top: var(--sp-8);
-      }
-
-      .btn-row {
+      .cta-row {
         flex-direction: column;
-        margin-top: var(--sp-6);
-      }
-
-      .btn-row .btn {
+        margin-top: var(--s-8);
         width: 100%;
       }
 
-      .card {
-        padding: var(--sp-8) var(--sp-5);
+      .cta-row .btn { width: 100%; }
+
+      .phone {
+        width: 200px;
+        height: 410px;
+        border-radius: 30px;
+        transform: rotateY(0) rotateX(0);
       }
 
-      .footer {
-        margin-top: var(--sp-10);
+      @keyframes phoneIdle {
+        0%, 100% { transform: translateY(0); }
+        50%      { transform: translateY(-5px); }
       }
+
+      .phone-island { width: 70px; height: 22px; top: 8px; }
+      .phone-status { height: 40px; }
+      .ph-bar { padding: 0 14px 8px; }
+      .ph-bar-title { font-size: 14px; }
+      .ph-days { padding: 0 10px 8px; gap: 4px; }
+      .ph-day { width: 28px; height: 28px; font-size: 9px; border-radius: 8px; }
+      .ph-list { padding: 0 8px; gap: 5px; }
+      .ph-card { padding: 8px 10px; gap: 7px; border-radius: 10px; }
+      .ph-num { width: 24px; height: 24px; font-size: 10px; border-radius: 6px; }
+      .ph-subj { font-size: 11px; }
+      .ph-time { font-size: 9.5px; }
+      .ph-tag { font-size: 7.5px; padding: 2px 5px; }
+      .dot { width: 4px; height: 4px; }
+
+      .card { padding: var(--s-8) var(--s-5); }
+      .footer { margin-top: var(--s-12); }
     }
 
-    /* ─── Large screens ──────────────────────────────────────────────── */
+    /* ── Wide desktop ──────────────────────────────────── */
     @media (min-width: 1200px) {
-      .hero {
-        gap: var(--sp-20);
-      }
+      .hero { gap: var(--s-24); }
     }
   </style>
 </head>
 <body>
   <div class="page">
 
-    <!-- ── Loading state ──────────────────────────────────────────── -->
-    <div id="loadingState" class="loading-wrapper">
+    <!-- ── Loading ─────────────────────────────────────── -->
+    <div id="loadingState" class="loading">
       <div class="spinner"></div>
-      <div class="badge">
+      <div class="chip">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Jadwal Profile
       </div>
       <h1>Opening Jadwal…</h1>
-      <p class="subtitle">Looking for your timing profile.</p>
+      <p class="sub">Looking for your timing profile.</p>
     </div>
 
-    <!-- ── Profile state ──────────────────────────────────────────── -->
-    <div id="profileState" class="profile-wrapper" style="display:none;">
+    <!-- ── Profile ─────────────────────────────────────── -->
+    <div id="profileState" class="profile-wrap" style="display:none;">
       <div class="card">
-        <div class="badge">
+        <div class="chip">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           Timing Profile
         </div>
         <h1 id="profileName">Schedule</h1>
-        <p class="subtitle" id="profileCount">0 periods loaded</p>
+        <p class="sub" id="profileCount">0 periods loaded</p>
 
-        <div class="slots-container" id="slotsList"></div>
+        <div class="slots" id="slotsList"></div>
 
         <div class="btn-stack">
           <a class="btn btn-primary" id="openDirectBtn" href="#">
@@ -828,116 +911,126 @@
             Copy Import Code
           </button>
           <a class="btn btn-ghost" href="https://github.com/Dariokisumo/Jadwal/releases/latest" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Don't have Jadwal? Download APK
           </a>
         </div>
 
-        <div class="tip-box">
+        <div class="tip">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          <span>
-            <strong>One-tap open tip:</strong> In Android
-            <strong>Settings → Apps → Jadwal → Open by default → Add links</strong>,
-            enable <code>dariokisumo.github.io</code> so shared links open Jadwal directly.
-          </span>
+          <span><strong>One-tap open tip:</strong> In Android <strong>Settings → Apps → Jadwal → Open by default → Add links</strong>, enable <code>dariokisumo.github.io</code> so shared links open Jadwal directly.</span>
         </div>
       </div>
     </div>
 
-    <!-- ── Home state ─────────────────────────────────────────────── -->
+    <!-- ── Home ────────────────────────────────────────── -->
     <div id="homeState" style="display:none;">
       <div class="hero">
         <div class="hero-content">
-          <div class="badge">
+          <div class="chip">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            Jadwal
+            Open Source
           </div>
 
-          <h1 class="hero-headline">Your Timetable,<br><span class="accent">Always</span> On Time</h1>
+          <h1 class="hero-headline">Your timetable,<br><em>always</em> on time.</h1>
 
-          <p class="hero-subtitle">Offline timetable tracker with live period status, home widget, and automatic notifications for Android.</p>
+          <p class="hero-sub">Offline timetable tracker with live period status, home&nbsp;widget, and automatic notifications. Built for teachers.</p>
 
           <div class="features">
-            <div class="feature-pill">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-              Live Period Status
+            <div class="feat">
+              <div class="feat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+              </div>
+              Live Status
             </div>
-            <div class="feature-pill">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <div class="feat">
+              <div class="feat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </div>
               Home Widget
             </div>
-            <div class="feature-pill">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              Auto Notifications
+            <div class="feat">
+              <div class="feat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              </div>
+              Notifications
             </div>
-            <div class="feature-pill">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+            <div class="feat">
+              <div class="feat-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+              </div>
               100% Offline
             </div>
           </div>
 
-          <div class="btn-row">
+          <div class="cta-row">
             <a class="btn btn-primary" href="https://github.com/Dariokisumo/Jadwal/releases/latest" target="_blank" rel="noopener">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download Latest APK
+              Download APK
             </a>
             <a class="btn btn-secondary" href="https://github.com/Dariokisumo/Jadwal" target="_blank" rel="noopener">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
-              View on GitHub
+              GitHub
             </a>
           </div>
         </div>
 
         <div class="hero-visual">
-          <div class="phone-mockup" aria-hidden="true">
-            <div class="phone-notch"></div>
-            <div class="phone-statusbar"></div>
-            <div class="phone-header">
-              <span class="phone-header-title">Jadwal</span>
-              <div class="phone-header-icons">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-              </div>
-            </div>
-            <div class="phone-chips">
-              <div class="phone-chip">M</div>
-              <div class="phone-chip active">T</div>
-              <div class="phone-chip">W</div>
-              <div class="phone-chip">T</div>
-              <div class="phone-chip">S</div>
-            </div>
-            <div class="phone-cards">
-              <div class="phone-card done">
-                <div class="phone-card-num">1</div>
-                <div class="phone-card-info">
-                  <div class="phone-card-subject">Mathematics</div>
-                  <div class="phone-card-time">8:00 – 8:45 AM</div>
-                </div>
-                <span class="phone-card-badge done-badge">✓</span>
-              </div>
-              <div class="phone-card active">
-                <div class="phone-card-num">2</div>
-                <div class="phone-card-info">
-                  <div class="phone-card-subject">English</div>
-                  <div class="phone-card-time">8:45 – 9:30 AM</div>
-                </div>
-                <span class="phone-card-badge ongoing">
-                  <span class="pulse-dot"></span>
-                  ONGOING
-                </span>
-              </div>
-              <div class="phone-card">
-                <div class="phone-card-num">3</div>
-                <div class="phone-card-info">
-                  <div class="phone-card-subject">Physics</div>
-                  <div class="phone-card-time">9:30 – 10:15 AM</div>
+          <div class="phone-scene">
+            <div class="phone" aria-hidden="true">
+              <div class="phone-island"></div>
+              <div class="phone-status"></div>
+              <div class="ph-bar">
+                <span class="ph-bar-title">Jadwal</span>
+                <div class="ph-bar-icons">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
                 </div>
               </div>
-              <div class="phone-card">
-                <div class="phone-card-num">4</div>
-                <div class="phone-card-info">
-                  <div class="phone-card-subject">Chemistry</div>
-                  <div class="phone-card-time">10:30 – 11:15 AM</div>
+              <div class="ph-days">
+                <div class="ph-day">M</div>
+                <div class="ph-day now">T</div>
+                <div class="ph-day">W</div>
+                <div class="ph-day">T</div>
+                <div class="ph-day">S</div>
+              </div>
+              <div class="ph-list">
+                <div class="ph-card past">
+                  <div class="ph-num">1</div>
+                  <div class="ph-info">
+                    <div class="ph-subj">Mathematics</div>
+                    <div class="ph-time">8:00 – 8:45 AM</div>
+                  </div>
+                  <span class="ph-tag dn">✓</span>
+                </div>
+                <div class="ph-card live">
+                  <div class="ph-num">2</div>
+                  <div class="ph-info">
+                    <div class="ph-subj">English</div>
+                    <div class="ph-time">8:45 – 9:30 AM</div>
+                  </div>
+                  <span class="ph-tag on"><span class="dot"></span>LIVE</span>
+                </div>
+                <div class="ph-card">
+                  <div class="ph-num">3</div>
+                  <div class="ph-info">
+                    <div class="ph-subj">Physics</div>
+                    <div class="ph-time">9:30 – 10:15 AM</div>
+                  </div>
+                </div>
+                <div class="ph-card">
+                  <div class="ph-num">4</div>
+                  <div class="ph-info">
+                    <div class="ph-subj">Chemistry</div>
+                    <div class="ph-time">10:30 – 11:15 AM</div>
+                  </div>
+                </div>
+                <div class="ph-card">
+                  <div class="ph-num">5</div>
+                  <div class="ph-info">
+                    <div class="ph-subj">History</div>
+                    <div class="ph-time">11:15 – 12:00 PM</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -973,7 +1066,6 @@
       let bytes;
       try { bytes = base64UrlToUint8Array(raw); } catch { return null; }
 
-      // Compact binary format: 'J', 'P', 0x01
       if (bytes.length >= 5 && bytes[0] === 0x4A && bytes[1] === 0x50 && bytes[2] === 0x01) {
         let offset = 3;
         const nameLen = bytes[offset++];
@@ -990,7 +1082,6 @@
         return { name: name || 'Schedule', slots };
       }
 
-      // Fallback: UTF-8 JSON
       try {
         const json = JSON.parse(new TextDecoder().decode(bytes));
         const slots = json.slots
@@ -1047,9 +1138,9 @@
       list.innerHTML = '';
       profile.slots.sort((a, b) => a.period - b.period).forEach(slot => {
         const row = document.createElement('div');
-        row.className = 'slot-row';
+        row.className = 'slot';
         row.innerHTML =
-          `<span class="slot-title">Period ${slot.period}</span>` +
+          `<span class="slot-name">Period ${slot.period}</span>` +
           `<span class="slot-time">${slot.start}&nbsp;–&nbsp;${slot.end}</span>`;
         list.appendChild(row);
       });
