@@ -9,6 +9,7 @@ import '../services/json_validator.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../theme/relational_colors.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/wavy_progress_bar.dart';
 import 'home_screen.dart';
 
@@ -116,26 +117,10 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
     if (text != null && text.trim().isNotEmpty) {
       _jsonController.text = text.trim();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Pasted timetable JSON from clipboard',
-              style: TextStyle(fontFamily: 'Inter'),
-            ),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        AppFeedback.showSuccess(context, 'Pasted timetable JSON from clipboard');
       }
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Clipboard is empty or does not contain text',
-            style: TextStyle(fontFamily: 'Inter'),
-          ),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      AppFeedback.showInfo(context, 'Clipboard is empty or does not contain text');
     }
   }
 

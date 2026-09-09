@@ -898,17 +898,17 @@
         <div class="slots" id="slotsList"></div>
 
         <div class="btn-stack">
-          <a class="btn btn-primary" id="openDirectBtn" href="#">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            Open in Jadwal App
-          </a>
-          <a class="btn btn-secondary" id="openIntentBtn" href="#" style="font-size:13px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>
-            Launch via Android Intent
-          </a>
-          <button class="btn btn-secondary" id="copyCodeBtn" type="button">
+          <button class="btn btn-primary" id="copyAndOpenBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copy Import Code
+            <span id="copyAndOpenText">Copy &amp; Open in Jadwal</span>
+          </button>
+          <a class="btn btn-secondary" id="openDirectBtn" href="#">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Direct App Link
+          </a>
+          <button class="btn btn-ghost" id="copyCodeBtn" type="button" style="font-size:13px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            Copy Raw Code Only
           </button>
           <a class="btn btn-ghost" href="https://github.com/Dariokisumo/Jadwal/releases/latest" target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -917,8 +917,8 @@
         </div>
 
         <div class="tip">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          <span><strong>One-tap open tip:</strong> In Android <strong>Settings → Apps → Jadwal → Open by default → Add links</strong>, enable <code>dariokisumo.github.io</code> so shared links open Jadwal directly.</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span><strong>Automatic Import:</strong> Tap <strong>Copy &amp; Open</strong>. The schedule is copied to your clipboard. When Jadwal opens, a calm import prompt appears at the bottom.</span>
         </div>
       </div>
     </div>
@@ -1150,19 +1150,65 @@
 
       const enc = encodeURIComponent(payload);
       const customSchemeUrl = `jadwal://profile?data=${enc}`;
-      const fallbackUrl = encodeURIComponent('https://github.com/Dariokisumo/Jadwal/releases/latest');
-      const intentUrl = `intent://profile/?data=${enc}#Intent;scheme=jadwal;package=com.example.jadwal;S.browser_fallback_url=${fallbackUrl};end`;
 
+      const copyAndOpenBtn = document.getElementById('copyAndOpenBtn');
+      const copyAndOpenText = document.getElementById('copyAndOpenText');
       const openDirectBtn = document.getElementById('openDirectBtn');
+      const copyCodeBtn = document.getElementById('copyCodeBtn');
+
       openDirectBtn.href = customSchemeUrl;
-      openDirectBtn.addEventListener('click', () => { window.location.href = customSchemeUrl; });
 
-      document.getElementById('openIntentBtn').href = intentUrl;
+      async function copyPayload() {
+        const textToCopy = `JADWAL_PROFILE:${payload}`;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(textToCopy);
+            return true;
+          }
+        } catch (e) {}
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = textToCopy;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
 
-      document.getElementById('copyCodeBtn').addEventListener('click', () => {
-        navigator.clipboard.writeText(`JADWAL_PROFILE:${payload}`)
-          .then(() => showToast('Import code copied!'))
-          .catch(() => showToast('Failed to copy'));
+      copyAndOpenBtn.addEventListener('click', async () => {
+        const ok = await copyPayload();
+        if (ok) {
+          copyAndOpenText.textContent = '✓ Copied! Opening Jadwal…';
+          showToast('Profile copied! Opening Jadwal…');
+          setTimeout(() => {
+            window.location.href = customSchemeUrl;
+          }, 200);
+          setTimeout(() => {
+            copyAndOpenText.textContent = 'Copy & Open in Jadwal';
+          }, 4000);
+        } else {
+          showToast('Opening Jadwal…');
+          window.location.href = customSchemeUrl;
+        }
+      });
+
+      openDirectBtn.addEventListener('click', () => {
+        window.location.href = customSchemeUrl;
+      });
+
+      copyCodeBtn.addEventListener('click', async () => {
+        const ok = await copyPayload();
+        if (ok) {
+          showToast('Import code copied to clipboard!');
+        } else {
+          showToast('Failed to copy code');
+        }
       });
     }
 

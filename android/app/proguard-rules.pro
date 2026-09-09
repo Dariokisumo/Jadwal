@@ -11,3 +11,6 @@
 # Compose
 -dontwarn androidx.compose.**
 -keep class androidx.compose.** { *; }
+
+# FileProvider
+-keep class androidx.core.content.FileProvider { *; }

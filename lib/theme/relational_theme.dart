@@ -179,6 +179,26 @@ ThemeData buildRelationalTheme(
         borderSide: BorderSide(color: dangerColor),
       ),
     ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: isDark ? surfaceContainerHighestColor : const Color(0xFF1E1C18),
+      contentTextStyle: TextStyle(
+        fontFamily: _kFontFamily,
+        fontSize: 13.5,
+        fontWeight: FontWeight.w500,
+        color: isDark ? textPrimaryColor : const Color(0xFFFDFBF7),
+      ),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isDark ? borderSubtleColor : const Color(0x2AFFFFFF),
+          width: 1,
+        ),
+      ),
+      elevation: 4,
+      actionTextColor: actionColor,
+      closeIconColor: isDark ? textSecondaryColor : const Color(0xFFB8B2A6),
+    ),
     extensions: [
       relationalColors,
     ],

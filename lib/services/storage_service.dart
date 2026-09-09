@@ -201,4 +201,30 @@ class StorageService {
     await saveTimingProfiles(profiles);
     return imported;
   }
+
+  static const _dismissedClipboardKey = 'dismissed_clipboard_hashes';
+
+  /// Checks if the given clipboard text has already been dismissed or imported
+  /// by the user so we don't nag them repeatedly.
+  static Future<bool> isClipboardTextDismissed(String text) async {
+    final prefs = await SharedPreferences.getInstance();
+    final dismissed = prefs.getStringList(_dismissedClipboardKey) ?? [];
+    final hash = text.hashCode.toString();
+    return dismissed.contains(hash);
+  }
+
+  /// Marks the clipboard text as dismissed or handled.
+  static Future<void> markClipboardTextDismissed(String text) async {
+    final prefs = await SharedPreferences.getInstance();
+    final dismissed = prefs.getStringList(_dismissedClipboardKey) ?? [];
+    final hash = text.hashCode.toString();
+    if (!dismissed.contains(hash)) {
+      dismissed.add(hash);
+      // Keep up to 50 recent hashes to prevent unbounded growth
+      if (dismissed.length > 50) {
+        dismissed.removeAt(0);
+      }
+      await prefs.setStringList(_dismissedClipboardKey, dismissed);
+    }
+  }
 }

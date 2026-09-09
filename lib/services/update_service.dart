@@ -276,6 +276,151 @@ class UpdateService {
     return 'arm64'; // Default to modern 64-bit architecture
   }
 
+  /// Gets the local storage directory for APK downloads.
+  static Future<String?> getDownloadDirectory() async {
+    try {
+      if (Platform.isAndroid) {
+        return await _platform.invokeMethod<String>('getDownloadDirectory');
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Prompts the Android system package installer to install the downloaded APK.
+  static Future<bool> installApk(String filePath) async {
+    try {
+      if (Platform.isAndroid) {
+        final result = await _platform.invokeMethod<bool>('installApk', {'filePath': filePath});
+        return result ?? false;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  /// Checks if the user has permitted the app to install unknown packages.
+  static Future<bool> canInstallUnknownApps() async {
+    try {
+      if (Platform.isAndroid) {
+        final result = await _platform.invokeMethod<bool>('canInstallUnknownApps');
+        return result ?? true;
+      }
+    } catch (_) {}
+    return true;
+  }
+
+  /// Opens the system settings screen for "Install unknown apps".
+  static Future<bool> openInstallUnknownAppsSettings() async {
+    try {
+      if (Platform.isAndroid) {
+        final result = await _platform.invokeMethod<bool>('openInstallUnknownAppsSettings');
+        return result ?? false;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  /// Enqueues the APK download into Android's system DownloadManager with
+  /// a notification in the notification bar and auto-install on completion.
+  static Future<int?> downloadWithDownloadManager({
+    required String url,
+    required String fileName,
+    required String title,
+  }) async {
+    try {
+      if (Platform.isAndroid) {
+        final id = await _platform.invokeMethod<int>(
+          'downloadWithDownloadManager',
+          {
+            'url': url,
+            'fileName': fileName,
+            'title': title,
+          },
+        );
+        return id;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Downloads an APK update file directly in-app, invoking [onProgress] with
+  /// received bytes, total bytes, and fraction (0.0 to 1.0).
+  ///
+  /// Returns the local file path upon completion, or throws on failure.
+  static Future<String> downloadApkDirectly({
+    required String url,
+    required String fileName,
+    required void Function(int received, int total, double progress) onProgress,
+    bool Function()? isCancelled,
+  }) async {
+    final downloadDir = await getDownloadDirectory();
+    if (downloadDir == null) {
+      throw Exception('Could not access device download directory.');
+    }
+
+    final targetFile = File('$downloadDir/$fileName');
+    if (await targetFile.exists()) {
+      try {
+        await targetFile.delete();
+      } catch (_) {}
+    }
+
+    HttpClient? client;
+    IOSink? sink;
+    try {
+      client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 15);
+
+      final request = await client.getUrl(Uri.parse(url));
+      request.followRedirects = true;
+      request.maxRedirects = 5;
+      request.headers.set('User-Agent', 'Jadwal-Android-App');
+      request.headers.set('Accept', 'application/octet-stream, application/vnd.android.package-archive, */*');
+
+      final response = await request.close();
+      if (response.statusCode != 200) {
+        throw Exception('Download failed (HTTP ${response.statusCode})');
+      }
+
+      final totalBytes = response.contentLength;
+      var receivedBytes = 0;
+      sink = targetFile.openWrite();
+
+      await for (final chunk in response) {
+        if (isCancelled != null && isCancelled()) {
+          throw Exception('Download cancelled by user.');
+        }
+        receivedBytes += chunk.length;
+        final progress = totalBytes > 0 ? (receivedBytes / totalBytes).clamp(0.0, 1.0) : -1.0;
+        onProgress(receivedBytes, totalBytes, progress);
+        sink.add(chunk);
+      }
+
+      await sink.flush();
+      await sink.close();
+      sink = null;
+
+      if (!await targetFile.exists() || (await targetFile.length()) == 0) {
+        throw Exception('Downloaded file is empty or missing.');
+      }
+
+      return targetFile.path;
+    } catch (e) {
+      if (sink != null) {
+        try {
+          await sink.close();
+        } catch (_) {}
+      }
+      if (await targetFile.exists()) {
+        try {
+          await targetFile.delete();
+        } catch (_) {}
+      }
+      rethrow;
+    } finally {
+      client?.close(force: true);
+    }
+  }
+
   /// Opens a URL using Android's action_view intent to trigger browser download
   /// or open the GitHub release page.
   static Future<bool> openUrl(String url) async {

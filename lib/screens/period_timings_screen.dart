@@ -11,6 +11,7 @@ import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/widget_data_service.dart';
 import '../theme/relational_colors.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/period_slot_card.dart';
 import '../widgets/profile_import_dialog.dart';
 
@@ -173,16 +174,12 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
       });
 
       HapticFeedback.mediumImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Added "${imported.name}" to saved profiles!',
-            style: const TextStyle(fontFamily: 'Inter'),
-          ),
-          backgroundColor: context.relColors.surfaceContainer,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        AppFeedback.showSuccess(
+          context,
+          'Added "${imported.name}" to saved profiles!',
+        );
+      }
     }
   }
 
@@ -190,14 +187,9 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
     final profile = TimingProfile.fromSharePayload(payload);
     if (profile == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Could not parse timing profile from link or code.',
-              style: TextStyle(fontFamily: 'Inter'),
-            ),
-            backgroundColor: context.relColors.danger,
-          ),
+        AppFeedback.showError(
+          context,
+          'Could not parse timing profile from link or code.',
         );
       }
       return;
@@ -239,15 +231,12 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
       setState(() {
         _hasUnsavedProfileChanges = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Saved profile "${_currentProfile.name}"',
-            style: const TextStyle(fontFamily: 'Inter'),
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        AppFeedback.showSuccess(
+          context,
+          'Saved profile "${_currentProfile.name}"',
+        );
+      }
     }
   }
 
@@ -296,9 +285,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
     final timetableData = await StorageService.loadTimetable();
     if (timetableData == null || timetableData['timetable'] is! Map) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No timetable found to update.')),
-        );
+        AppFeedback.showError(context, 'No timetable found to update.');
       }
       return;
     }
@@ -350,15 +337,9 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
       });
 
       HapticFeedback.mediumImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Timetable updated with "${_currentProfile.name}" timings!',
-            style: const TextStyle(fontFamily: 'Inter'),
-          ),
-          backgroundColor: colors.surfaceContainer,
-          behavior: SnackBarBehavior.floating,
-        ),
+      AppFeedback.showSuccess(
+        context,
+        'Timetable updated with "${_currentProfile.name}" timings!',
       );
     }
   }
@@ -506,12 +487,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
 
   void _deleteCurrentProfile() {
     if (_profiles.length <= 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot delete the only profile.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      AppFeedback.showError(context, 'Cannot delete the only profile.');
       return;
     }
 
@@ -629,9 +605,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
 
   void _addPeriodSlot() {
     if (_periodCount >= 15) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Maximum 15 periods supported.')),
-      );
+      AppFeedback.showInfo(context, 'Maximum 15 periods supported.');
       return;
     }
 

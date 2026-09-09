@@ -6,6 +6,7 @@ import '../constants/timetable_prompt.dart';
 import '../controllers/edit_timetable_controller.dart';
 import '../services/storage_service.dart';
 import '../theme/relational_colors.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/period_edit_sheet.dart';
 
 class EditTimetableScreen extends StatefulWidget {
@@ -206,9 +207,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
       if (ok) {
         Navigator.of(context).pop(true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save. Please try again.')),
-        );
+        AppFeedback.showError(context, 'Failed to save. Please try again.');
       }
     }
   }
@@ -349,9 +348,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
 
   void _showRemoveColumnConfirmation(int periodNumber) {
     if (_controller.periodCount <= 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot remove the only period column.')),
-      );
+      AppFeedback.showError(context, 'Cannot remove the only period column.');
       return;
     }
 

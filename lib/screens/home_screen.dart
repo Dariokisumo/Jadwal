@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -18,7 +19,9 @@ import '../services/storage_service.dart';
 import '../services/update_service.dart';
 import '../services/widget_data_service.dart';
 import '../theme/relational_colors.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/break_indicator.dart';
+import '../widgets/clipboard_import_sheet.dart';
 import '../widgets/day_chip.dart';
 import '../widgets/period_card.dart';
 import '../widgets/profile_import_dialog.dart';
@@ -182,30 +185,123 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (text == null || text.isEmpty || text == _lastCheckedClipboard) return;
       _lastCheckedClipboard = text;
 
+      // Check if user already dismissed or imported this clipboard text
+      if (await StorageService.isClipboardTextDismissed(text)) return;
+
+      // 1. Check for Timing Profile payload
       final profile = TimingProfile.fromSharePayload(text);
       if (profile != null && mounted) {
-        final colors = context.relColors;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Found "${profile.name}" timing profile in clipboard!',
-              style: const TextStyle(fontFamily: 'Inter'),
-            ),
-            backgroundColor: colors.surfaceContainer,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 8),
-            action: SnackBarAction(
-              label: 'Import',
-              textColor: colors.action,
-              onPressed: () {
-                _handleImportedProfile(profile);
-              },
-            ),
-          ),
+        final sortedSlots = profile.slots.keys.toList()..sort();
+        final timeSpan = sortedSlots.isNotEmpty
+            ? '${profile.slots[sortedSlots.first]![0]} – ${profile.slots[sortedSlots.last]![1]}'
+            : '';
+        final details = '${profile.slots.length} periods • $timeSpan';
+
+        final shouldImport = await ClipboardImportSheet.show(
+          context,
+          title: 'Timing Profile Detected',
+          badge: 'CLIPBOARD DETECTED',
+          name: profile.name,
+          details: details,
+          confirmLabel: 'Preview & Import',
+          icon: Icons.schedule_rounded,
         );
+
+        if (shouldImport == true && mounted) {
+          await _handleImportedProfile(profile);
+          await StorageService.markClipboardTextDismissed(text);
+        } else if (shouldImport == false) {
+          await StorageService.markClipboardTextDismissed(text);
+        }
+        return;
+      }
+
+      // 2. Check for full Timetable JSON payload
+      if (text.startsWith('{') && text.contains('"timetable"')) {
+        try {
+          final decoded = jsonDecode(text);
+          if (decoded is Map<String, dynamic> && decoded['timetable'] is Map) {
+            final timetableMap = decoded['timetable'] as Map;
+            final dayCount = timetableMap.keys.length;
+            final teacher = decoded['teacher_name'] as String? ?? 'Teacher';
+
+            if (mounted) {
+              final shouldImport = await ClipboardImportSheet.show(
+                context,
+                title: 'Timetable Detected',
+                badge: 'CLIPBOARD DETECTED',
+                name: '$teacher\'s Timetable',
+                details: '$dayCount active teaching days',
+                confirmLabel: 'Review & Import',
+                icon: Icons.table_chart_rounded,
+              );
+
+              if (shouldImport == true && mounted) {
+                await _confirmAndImportTimetableJson(decoded);
+                await StorageService.markClipboardTextDismissed(text);
+              } else if (shouldImport == false) {
+                await StorageService.markClipboardTextDismissed(text);
+              }
+            }
+          }
+        } catch (_) {}
       }
     } catch (_) {}
+  }
+
+  Future<void> _confirmAndImportTimetableJson(Map<String, dynamic> data) async {
+    final colors = context.relColors;
+    final teacher = data['teacher_name'] as String? ?? 'Teacher';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(
+          'Import Timetable for $teacher?',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+            color: colors.textPrimary,
+          ),
+        ),
+        content: Text(
+          'This will replace your current timetable with the timetable copied from your clipboard.',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            color: colors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(fontFamily: 'Inter', color: colors.textSecondary),
+            ),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: colors.action),
+            child: Text(
+              'Import Timetable',
+              style: TextStyle(fontFamily: 'Inter', color: colors.onAction),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await StorageService.saveTimetable(data);
+      final rawTimetable = data['timetable'] as Map<String, dynamic>? ?? {};
+      unawaited(NotificationService.scheduleAll(rawTimetable));
+      unawaited(WidgetDataService.updateWidget());
+      await _loadTimetable();
+      if (mounted) {
+        AppFeedback.showSuccess(context, 'Imported timetable for $teacher');
+      }
+    }
   }
 
   void _detectPeriodTransition() {
@@ -292,9 +388,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _checkPermissions();
               } else {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Permission still missing.')),
-                  );
+                  AppFeedback.showError(context, 'Permission still missing.');
                 }
               }
             },
@@ -340,8 +434,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _checkPermissions();
               } else {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Permission still missing. Please enable "Alarms & reminders".')),
+                  AppFeedback.showError(
+                    context,
+                    'Permission still missing. Please enable "Alarms & reminders".',
                   );
                 }
               }
@@ -408,11 +503,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await NotificationService.scheduleAll(_timetable);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Notifications could not be scheduled. Open Settings > Jadwal > Notifications to verify permissions.'),
-            duration: Duration(seconds: 4),
-          ),
+        AppFeedback.showError(
+          context,
+          'Notifications could not be scheduled. Verify permissions in Settings.',
         );
       }
     }
@@ -523,16 +616,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (confirmed == true && mounted) {
       final imported = await StorageService.importTimingProfile(profile);
       HapticFeedback.mediumImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Added "${imported.name}" to saved profiles! Manage it in Misc > Period Timings.',
-            style: const TextStyle(fontFamily: 'Inter'),
-          ),
-          backgroundColor: context.relColors.surfaceContainer,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        AppFeedback.showSuccess(
+          context,
+          'Added "${imported.name}" to saved profiles! Manage it in Misc > Period Timings.',
+        );
+      }
     }
   }
 
@@ -544,44 +633,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _checkManualUpdate() async {
-    final colors = context.relColors;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'Checking for updates...',
-          style: TextStyle(fontFamily: 'Inter'),
-        ),
-        duration: const Duration(seconds: 2),
-        backgroundColor: colors.surfaceContainer,
-      ),
-    );
+    AppFeedback.showInfo(context, 'Checking for updates...');
 
     final release = await UpdateService.checkForUpdate(force: true);
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
     if (release != null && release.isNewer) {
       UpdateDialog.show(context, release);
     } else if (release != null && !release.isNewer) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'App is up to date (v${release.currentVersion})',
-            style: const TextStyle(fontFamily: 'Inter'),
-          ),
-          duration: const Duration(seconds: 3),
-        ),
+      AppFeedback.showSuccess(
+        context,
+        'App is up to date (v${release.currentVersion})',
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Could not reach GitHub. Check your internet connection.',
-            style: TextStyle(fontFamily: 'Inter'),
-          ),
-          duration: Duration(seconds: 3),
-        ),
+      AppFeedback.showError(
+        context,
+        'Could not reach GitHub. Check your internet connection.',
       );
     }
   }
