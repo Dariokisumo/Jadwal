@@ -24,17 +24,50 @@ class MainActivity: FlutterActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         handleDeepLink(intent)
     }
 
     private fun handleDeepLink(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_VIEW) {
-            val data = intent.data
-            if (data != null && (data.scheme == "jadwal" || data.scheme == "https" || data.scheme == "http")) {
-                val url = data.toString()
-                pendingDeepLink = url
-                methodChannel?.invokeMethod("onDeepLink", url)
+        if (intent == null) return
+
+        var url: String? = null
+
+        // 1. Check intent.data URI (e.g. jadwal://profile?data=... or https://dariokisumo.github.io/p#...)
+        val data = intent.data
+        if (data != null && (data.scheme == "jadwal" || data.scheme == "https" || data.scheme == "http")) {
+            url = data.toString()
+        }
+
+        // 2. Check Android Intent extras (e.g. intent launched with S.data=... or S.payload=...)
+        if (url == null) {
+            val extraData = intent.getStringExtra("data")
+                ?: intent.getStringExtra("payload")
+                ?: intent.getStringExtra("profile")
+                ?: intent.extras?.getString("data")
+            if (!extraData.isNullOrBlank()) {
+                url = if (extraData.startsWith("jadwal:") ||
+                    extraData.startsWith("http://") ||
+                    extraData.startsWith("https://") ||
+                    extraData.startsWith("JADWAL_PROFILE:")) {
+                    extraData
+                } else {
+                    "jadwal://profile?data=$extraData"
+                }
             }
+        }
+
+        // 3. Check ACTION_SEND with text/plain (direct text/link shared into Jadwal)
+        if (url == null && intent.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true) {
+            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+            if (!sharedText.isNullOrBlank()) {
+                url = sharedText.trim()
+            }
+        }
+
+        if (url != null) {
+            pendingDeepLink = url
+            methodChannel?.invokeMethod("onDeepLink", url)
         }
     }
 

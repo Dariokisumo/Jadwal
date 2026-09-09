@@ -35,7 +35,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _teacherName = '';
   Map<String, dynamic> _timetable = {};
   List<Period> _selectedDayPeriods = [];
@@ -49,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _exactAlarmMissing = false;
   bool _showFinishedOverride = false;
   final Map<String, Set<int>> _finishedOverridesByDay = {};
+  String? _lastCheckedClipboard;
 
   Set<int> _overridesFor(String dayKey) =>
       _finishedOverridesByDay[dayKey] ?? {};
@@ -128,6 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _selectedDayKey = _todayKey;
     final initialIndex = _allDaysInOrder.indexOf(_selectedDayKey);
     _pageController = PageController(
@@ -139,6 +141,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final pending = DeepLinkService.consumePendingProfile();
       if (pending != null && mounted) {
         _handleImportedProfile(pending);
+      } else {
+        _checkClipboardForProfile();
       }
     });
     _deepLinkSub = DeepLinkService.onProfileReceived.listen((profile) {
@@ -156,10 +160,52 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _deepLinkSub?.cancel();
     _refreshTimer?.cancel();
     _pageController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkClipboardForProfile();
+      DeepLinkService.checkInitialLink();
+    }
+  }
+
+  Future<void> _checkClipboardForProfile() async {
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text?.trim();
+      if (text == null || text.isEmpty || text == _lastCheckedClipboard) return;
+      _lastCheckedClipboard = text;
+
+      final profile = TimingProfile.fromSharePayload(text);
+      if (profile != null && mounted) {
+        final colors = context.relColors;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Found "${profile.name}" timing profile in clipboard!',
+              style: const TextStyle(fontFamily: 'Inter'),
+            ),
+            backgroundColor: colors.surfaceContainer,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 8),
+            action: SnackBarAction(
+              label: 'Import',
+              textColor: colors.action,
+              onPressed: () {
+                _handleImportedProfile(profile);
+              },
+            ),
+          ),
+        );
+      }
+    } catch (_) {}
   }
 
   void _detectPeriodTransition() {

@@ -182,6 +182,22 @@ class TimingProfile {
         }
       }
 
+      // Try decoding URL-encoding (e.g. %2B, %2F, %3D) if present
+      try {
+        cleaned = Uri.decodeComponent(cleaned);
+      } catch (_) {}
+
+      // Strip any residual path or hash fragments
+      while (cleaned.startsWith('/p/') ||
+          cleaned.startsWith('p/') ||
+          cleaned.startsWith('p#') ||
+          cleaned.startsWith('#')) {
+        if (cleaned.startsWith('/p/')) cleaned = cleaned.substring(3);
+        if (cleaned.startsWith('p/')) cleaned = cleaned.substring(2);
+        if (cleaned.startsWith('p#')) cleaned = cleaned.substring(2);
+        if (cleaned.startsWith('#')) cleaned = cleaned.substring(1);
+      }
+
       // Extract from code format: JADWAL_PROFILE:...
       if (cleaned.startsWith('JADWAL_PROFILE:')) {
         cleaned = cleaned.substring('JADWAL_PROFILE:'.length).trim();

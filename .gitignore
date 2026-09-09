@@ -34,3 +34,4 @@ imgs/
 Icons/
 test_tz.dart
 test_utc_tz.dart
+.opencode/

@@ -104,6 +104,16 @@
                     android:scheme="https"
                     android:host="dariokisumo.github.io"
                     android:pathPrefix="/p" />
+                <data
+                    android:scheme="https"
+                    android:host="dariokisumo.github.io"
+                    android:pathPrefix="/profile" />
+            </intent-filter>
+            <!-- Share target for timing profile text or links shared to Jadwal -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
 
