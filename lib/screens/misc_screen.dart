@@ -92,7 +92,7 @@ class _MiscScreenState extends State<MiscScreen> {
               Text(
                 'Periods per Day',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: colors.textPrimary,
@@ -102,7 +102,7 @@ class _MiscScreenState extends State<MiscScreen> {
               Text(
                 'Sets the daily period slot capacity for your timetable grid.',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 13,
                   color: colors.textSecondary,
                 ),
@@ -137,7 +137,7 @@ class _MiscScreenState extends State<MiscScreen> {
                     child: Text(
                       '$tempCount',
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                         color: colors.action,
@@ -180,7 +180,7 @@ class _MiscScreenState extends State<MiscScreen> {
                   child: const Text(
                     'Save',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -217,7 +217,7 @@ class _MiscScreenState extends State<MiscScreen> {
           title: Text(
             'Misc',
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: colors.textPrimary,
@@ -232,7 +232,7 @@ class _MiscScreenState extends State<MiscScreen> {
                   Text(
                     'TIMETABLE CUSTOMIZATION',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -287,7 +287,7 @@ class _MiscScreenState extends State<MiscScreen> {
                               Text(
                                 'Universal Institution Support',
                                 style: TextStyle(
-                                  fontFamily: 'Inter',
+                                  fontFamily: 'Geist',
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: colors.textPrimary,
@@ -297,7 +297,7 @@ class _MiscScreenState extends State<MiscScreen> {
                               Text(
                                 'Jadwal supports variable period counts (1–15) and custom schedule profiles for any school, college, or university.',
                                 style: TextStyle(
-                                  fontFamily: 'Inter',
+                                  fontFamily: 'Geist',
                                   fontSize: 12,
                                   height: 1.4,
                                   color: colors.textSecondary,
@@ -352,7 +352,7 @@ class _MiscScreenState extends State<MiscScreen> {
                   Text(
                     title,
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: colors.textPrimary,
@@ -362,7 +362,7 @@ class _MiscScreenState extends State<MiscScreen> {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 12,
                       color: colors.textSecondary,
                     ),
@@ -380,7 +380,7 @@ class _MiscScreenState extends State<MiscScreen> {
                 child: Text(
                   trailingBadge,
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: colors.action,

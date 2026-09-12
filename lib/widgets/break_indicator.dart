@@ -64,7 +64,7 @@ class BreakIndicator extends StatelessWidget {
                   Text(
                     isNow ? 'NOW • $label' : label,
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 11,
                       fontWeight: isNow ? FontWeight.w600 : FontWeight.w500,
                       letterSpacing: 0.2,

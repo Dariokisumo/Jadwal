@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'primitives.dart';
 import 'relational_colors.dart';
 
-const String _kFontFamily = 'Inter';
+const String _kFontFamily = 'Geist';
 
 /// Build the light or dark [ThemeData] using the relational two-tier token system.
 ///

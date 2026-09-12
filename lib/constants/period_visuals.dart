@@ -8,22 +8,8 @@ import 'package:flutter/material.dart';
 class PeriodVisuals {
   PeriodVisuals._();
 
-  static const Map<int, IconData> icons = {
-    1: Icons.filter_1,
-    2: Icons.filter_2,
-    3: Icons.filter_3,
-    4: Icons.filter_4,
-    5: Icons.filter_5,
-    6: Icons.filter_6,
-    7: Icons.filter_7,
-    8: Icons.filter_8,
-    9: Icons.filter_9,
-  };
-
-  /// Alternating border radius: odd periods = circle, even = rounded square.
-  static BorderRadius borderRadius(int period) {
-    return period.isOdd
-        ? BorderRadius.circular(18)
-        : BorderRadius.circular(10);
+  /// Consistent rounded rectangle token for period numeral badges.
+  static BorderRadius borderRadius([int? period]) {
+    return BorderRadius.circular(10);
   }
 }

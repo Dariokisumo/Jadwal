@@ -1,7 +1,7 @@
 name: jadwal
 description: Offline teacher timetable tracker with live period status and local notifications.
 publish_to: 'none'
-version: 2.5.0+48
+version: 2.7.0+50
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -49,27 +49,20 @@ flutter:
   uses-material-design: true
 
   fonts:
-    - family: Inter
+    - family: Geist
       fonts:
-        - asset: assets/fonts/Inter/Inter-Regular.ttf
+        - asset: assets/fonts/Geist/Geist-Regular.ttf
           weight: 400
-        - asset: assets/fonts/Inter/Inter-SemiBold.ttf
+        - asset: assets/fonts/Geist/Geist-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Geist/Geist-SemiBold.ttf
           weight: 600
-        - asset: assets/fonts/Inter/Inter-Bold.ttf
+        - asset: assets/fonts/Geist/Geist-Bold.ttf
           weight: 700
     - family: JetBrainsMono
       fonts:
         - asset: assets/fonts/JetBrainsMono/JetBrainsMono-Regular.ttf
           weight: 400
-    - family: PlayfairDisplay
-      fonts:
-        - asset: assets/fonts/PlayfairDisplay/PlayfairDisplay-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/PlayfairDisplay/PlayfairDisplay-Italic.ttf
-          weight: 400
-          style: italic
-        - asset: assets/fonts/PlayfairDisplay/PlayfairDisplay-Bold.ttf
-          weight: 700
 
 flutter_launcher_icons:
   android: true

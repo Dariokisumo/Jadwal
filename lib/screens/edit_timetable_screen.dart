@@ -89,7 +89,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
             Text(
               'Move Period $periodNumber to...',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: colors.textPrimary,
@@ -126,7 +126,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
                     child: Text(
                       '$p',
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: occupied
@@ -176,16 +176,16 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text(
           'Delete Period?',
-          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
         ),
         content: Text(
           'This will remove Period $periodNumber from ${kDayLabels[dayKey] ?? dayKey}.',
-          style: const TextStyle(fontFamily: 'Inter'),
+          style: const TextStyle(fontFamily: 'Geist'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
           ),
           TextButton(
             onPressed: () {
@@ -194,7 +194,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
               _controller.deletePeriod(dayKey, periodNumber);
             },
             style: TextButton.styleFrom(foregroundColor: colors.danger),
-            child: const Text('Delete', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+            child: const Text('Delete', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -240,7 +240,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
           title: Text(
             'Edit Timetable',
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 17,
               fontWeight: FontWeight.w700,
               color: colors.textPrimary,
@@ -299,14 +299,14 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
       children: [
         const SizedBox(width: 44),
         ..._controller.periods.map((p) => SizedBox(
-              width: 64,
+              width: 70,
               child: GestureDetector(
                 onLongPress: () => _showRemoveColumnConfirmation(p),
                 child: Center(
                   child: Text(
                     'P$p',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: colors.textSecondary,
@@ -358,16 +358,16 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
       builder: (ctx) => AlertDialog(
         title: Text(
           'Delete Period $periodNumber Column?',
-          style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+          style: const TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
         ),
         content: Text(
           'This will remove Period $periodNumber and all its scheduled classes across all days. Subsequent periods will be shifted down.',
-          style: TextStyle(fontFamily: 'Inter', color: colors.textSecondary),
+          style: TextStyle(fontFamily: 'Geist', color: colors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
           ),
           TextButton(
             onPressed: () {
@@ -376,7 +376,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
               _controller.removePeriodColumn(periodNumber);
             },
             style: TextButton.styleFrom(foregroundColor: colors.danger),
-            child: const Text('Delete Column', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+            child: const Text('Delete Column', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -393,7 +393,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
             child: Text(
               kDayAbbreviations[dayKey] ?? dayKey.substring(0, 2),
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: colors.textPrimary,
@@ -414,8 +414,8 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
       onTap: () => _onCellTap(dayKey, periodNumber),
       onLongPress: () => _onCellLongPress(dayKey, periodNumber),
       child: Container(
-        width: 64,
-        height: 48,
+        width: 70,
+        height: 52,
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
           color: isEmpty
@@ -455,41 +455,45 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
         ? data['period'] as int
         : int.tryParse(data['period'].toString()) ?? 1;
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'P$periodNum',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: colors.action,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'P$periodNum',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+              color: colors.action,
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          subject,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 9,
-            fontWeight: FontWeight.w700,
-            color: colors.textPrimary,
+          Text(
+            subject,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: colors.textPrimary,
+            ),
           ),
-        ),
-        Text(
-          classroom,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 8,
-            color: colors.textSecondary,
+          Text(
+            classroom,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
+              color: colors.textSecondary,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -524,7 +528,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
             child: Text(
               'Save',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -542,16 +546,16 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text(
           'Unsaved Changes',
-          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
         ),
         content: const Text(
           'You have unsaved changes. Do you want to discard them?',
-          style: TextStyle(fontFamily: 'Inter'),
+          style: TextStyle(fontFamily: 'Geist'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Keep Editing', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Keep Editing', style: TextStyle(fontFamily: 'Geist')),
           ),
           TextButton(
             onPressed: () {
@@ -559,7 +563,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
               Navigator.of(context).pop();
             },
             style: TextButton.styleFrom(foregroundColor: colors.danger),
-            child: const Text('Discard', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+            child: const Text('Discard', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
           ),
         ],
       ),

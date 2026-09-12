@@ -58,52 +58,56 @@ class DayChip extends StatelessWidget {
       enabled: !isFriday,
       selected: isSelected,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: isFriday ? null : onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: chipColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: borderColor,
-                  width: isSelected || isToday ? 1.5 : 1,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: chipColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: borderColor,
+                    width: isSelected || isToday ? 1.5 : 1,
+                  ),
                 ),
-              ),
-              alignment: Alignment.center,
-              child: isFriday
-                  ? Icon(
-                      Icons.coffee_rounded,
-                      size: 16,
-                      color: textColor,
-                    )
-                  : Text(
-                      label,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                alignment: Alignment.center,
+                child: isFriday
+                    ? Icon(
+                        Icons.coffee_rounded,
+                        size: 16,
                         color: textColor,
+                      )
+                    : Text(
+                        label,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 13,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: textColor,
+                        ),
                       ),
-                    ),
-            ),
-            const SizedBox(height: 4),
-            if (isToday)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: CustomPaint(
-                  size: const Size(8, 5),
-                  painter: TrianglePainter(color: colors.action),
-                ),
-              )
-            else
-              const SizedBox(height: 7),
-          ],
+              ),
+              const SizedBox(height: 4),
+              if (isToday)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: CustomPaint(
+                    size: const Size(8, 5),
+                    painter: TrianglePainter(color: colors.action),
+                  ),
+                )
+              else
+                const SizedBox(height: 7),
+            ],
+          ),
         ),
       ),
     );

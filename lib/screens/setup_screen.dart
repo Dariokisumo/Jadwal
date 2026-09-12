@@ -306,7 +306,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
               Text(
                 'Jadwal',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                   color: colors.action,
@@ -316,7 +316,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
               Text(
                 'Turn a photo of your timetable into a live class tracker \u2014 no internet needed',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 15,
                   color: colors.textSecondary,
                 ),
@@ -374,7 +374,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
                 Text(
                   'Timetable Imported',
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: colors.textPrimary,
@@ -384,7 +384,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
                 Text(
                   'Your schedule data is saved offline on device.',
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     fontSize: 12,
                     color: colors.textSecondary,
                   ),
@@ -441,7 +441,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
         Text(
           'Step $step of 3',
           style: TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'Geist',
             fontSize: 12,
             color: colors.textSecondary,
           ),
@@ -522,7 +522,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
             'Once the AI replies with JSON, copy the response and paste it '
             'in Step 2 below.',
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 12.5,
               color: colors.textSecondary,
             ),
@@ -540,7 +540,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
                 label: Text(
                   'Already have JSON? Paste it here →',
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: colors.action,
@@ -574,7 +574,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
               Text(
                 'Paste JSON',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: colors.textPrimary,
@@ -586,7 +586,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
                 label: Text(
                   'Paste from clipboard',
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: colors.action,
@@ -641,7 +641,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
                 ? 'Content detected — tap Import Timetable to continue'
                 : 'Paste the JSON from the AI or upload a .json file',
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 12,
               color: _hasPastedContent ? colors.action : colors.borderMuted,
             ),
@@ -698,7 +698,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
               label: Text(
                 'Or upload a .json file',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 13,
                   color: colors.borderMuted,
                 ),
@@ -822,7 +822,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
               child: Text(
                 message,
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 13,
                   color: colors.danger,
                 ),
@@ -869,7 +869,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
                 child: Text(
                   stepNumber,
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     color: colors.onAction,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
@@ -880,7 +880,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
               Text(
                 title,
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: colors.textPrimary,
@@ -892,7 +892,7 @@ class _SetupScreenState extends State<SetupScreen> with SingleTickerProviderStat
           Text(
             body,
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 13.5,
               color: colors.textSecondary,
               height: 1.4,

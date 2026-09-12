@@ -105,7 +105,7 @@ class ClipboardImportSheet extends StatelessWidget {
                     Text(
                       badge,
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.6,
@@ -161,7 +161,7 @@ class ClipboardImportSheet extends StatelessWidget {
                         Text(
                           name,
                           style: TextStyle(
-                            fontFamily: 'Inter',
+                            fontFamily: 'Geist',
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: colors.textPrimary,
@@ -174,7 +174,7 @@ class ClipboardImportSheet extends StatelessWidget {
                           Text(
                             details,
                             style: TextStyle(
-                              fontFamily: 'Inter',
+                              fontFamily: 'Geist',
                               fontSize: 12.5,
                               color: colors.textSecondary,
                             ),
@@ -202,7 +202,7 @@ class ClipboardImportSheet extends StatelessWidget {
               child: Text(
                 confirmLabel,
                 style: const TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w600,
                   fontSize: 14.5,
                 ),
@@ -218,7 +218,7 @@ class ClipboardImportSheet extends StatelessWidget {
               child: const Text(
                 'Dismiss',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontWeight: FontWeight.w500,
                   fontSize: 13.5,
                 ),

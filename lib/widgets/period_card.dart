@@ -139,7 +139,7 @@ class _PeriodCardState extends State<PeriodCard> {
                   Text(
                     '${Period.formatMinutes(minutesRemaining)} left',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       fontFeatures: const [FontFeature.tabularFigures()],
@@ -185,7 +185,7 @@ class _PeriodCardState extends State<PeriodCard> {
       child: Text(
         'in ${Period.formatMinutes(minutes)}',
         style: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: 'Geist',
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: colors.action,
@@ -223,7 +223,7 @@ class _PeriodCardState extends State<PeriodCard> {
             Text(
               'now',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: colors.action,
@@ -281,7 +281,7 @@ class _PeriodCardState extends State<PeriodCard> {
               Text(
                 'Done',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: colors.textSecondary,
@@ -357,7 +357,7 @@ class _PeriodCardState extends State<PeriodCard> {
           child: Text(
             '${widget.period.periodNumber}',
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 15,
               fontWeight: FontWeight.w700,
               color: secondaryColor,
@@ -374,7 +374,7 @@ class _PeriodCardState extends State<PeriodCard> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 20,
                   fontWeight: boldSubject ? FontWeight.w700 : FontWeight.w600,
                   color: subjectColor,
@@ -407,7 +407,7 @@ class _PeriodCardState extends State<PeriodCard> {
                         Text(
                           widget.period.classroom,
                           style: TextStyle(
-                            fontFamily: 'Inter',
+                            fontFamily: 'Geist',
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
                             color: secondaryColor,
@@ -417,20 +417,20 @@ class _PeriodCardState extends State<PeriodCard> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      '${widget.period.start} – ${widget.period.end}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: 'PlayfairDisplay',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                        color: secondaryColor,
+                    Expanded(
+                      child: Text(
+                        '${widget.period.start} – ${widget.period.end}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                          color: secondaryColor,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ],

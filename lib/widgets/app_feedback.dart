@@ -14,11 +14,12 @@ class AppFeedback {
     Duration duration = const Duration(seconds: 3),
     SnackBarAction? action,
   }) {
+    final colors = context.relColors;
     show(
       context,
       message: message,
       icon: Icons.check_circle_rounded,
-      iconColor: const Color(0xFFD4930D),
+      iconColor: colors.action,
       duration: duration,
       action: action,
     );
@@ -31,11 +32,12 @@ class AppFeedback {
     Duration duration = const Duration(seconds: 4),
     SnackBarAction? action,
   }) {
+    final colors = context.relColors;
     show(
       context,
       message: message,
       icon: Icons.error_outline_rounded,
-      iconColor: const Color(0xFFE5484D),
+      iconColor: colors.danger,
       duration: duration,
       action: action,
     );
@@ -48,11 +50,12 @@ class AppFeedback {
     Duration duration = const Duration(seconds: 3),
     SnackBarAction? action,
   }) {
+    final colors = context.relColors;
     show(
       context,
       message: message,
       icon: Icons.info_outline_rounded,
-      iconColor: const Color(0xFF8A7E72),
+      iconColor: colors.textSecondary,
       duration: duration,
       action: action,
     );
@@ -112,7 +115,7 @@ class AppFeedback {
               child: Text(
                 message,
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   color: fgColor,
                   fontSize: 13.5,
                   fontWeight: FontWeight.w500,

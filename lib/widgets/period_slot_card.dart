@@ -62,7 +62,7 @@ class PeriodSlotCard extends StatelessWidget {
             child: Text(
               'P$periodNumber',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: colors.action,
@@ -117,7 +117,7 @@ class PeriodSlotCard extends StatelessWidget {
             child: Text(
               isValid ? '${duration}m' : '!',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: isValid ? colors.textSecondary : colors.danger,
@@ -167,7 +167,7 @@ class TimePickerChip extends StatelessWidget {
                   timeStr,
                   maxLines: 1,
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: colors.textPrimary,
@@ -229,7 +229,7 @@ class BreakIndicatorRow extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: colors.textSecondary,

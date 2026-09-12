@@ -218,7 +218,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                             child: Text(
                               'UPDATE AVAILABLE',
                               style: TextStyle(
-                                fontFamily: 'Inter',
+                                fontFamily: 'Geist',
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
@@ -232,7 +232,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       Text(
                         'Jadwal ${release.tagName}',
                         style: TextStyle(
-                          fontFamily: 'Inter',
+                          fontFamily: 'Geist',
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: colors.textPrimary,
@@ -242,7 +242,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       Text(
                         'A newer version is ready to install',
                         style: TextStyle(
-                          fontFamily: 'Inter',
+                          fontFamily: 'Geist',
                           fontSize: 12.5,
                           color: colors.textSecondary,
                         ),
@@ -278,7 +278,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       Text(
                         "WHAT'S NEW",
                         style: TextStyle(
-                          fontFamily: 'Inter',
+                          fontFamily: 'Geist',
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.4,
@@ -315,7 +315,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                                   child: Text(
                                     bullet,
                                     style: TextStyle(
-                                      fontFamily: 'Inter',
+                                      fontFamily: 'Geist',
                                       fontSize: 12.5,
                                       height: 1.35,
                                       color: colors.textPrimary,
@@ -352,7 +352,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       ? 'Detecting device architecture...'
                       : 'Detected $archLabel architecture for your device.',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 11.5,
                       fontWeight: FontWeight.w500,
                       color: colors.textSecondary,
@@ -380,7 +380,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                   child: Text(
                     'Tap download to save the matching APK, then open it to install.',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 11.5,
                       height: 1.35,
                       color: colors.textSecondary,
@@ -419,7 +419,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                           child: Text(
                             'Downloading update (${_activeArchLabel.toUpperCase()})...',
                             style: TextStyle(
-                              fontFamily: 'Inter',
+                              fontFamily: 'Geist',
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                               color: colors.textPrimary,
@@ -458,7 +458,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                               ? '${_formatBytes(_receivedBytes)} / ${_formatBytes(_totalBytes)}'
                               : _formatBytes(_receivedBytes),
                           style: TextStyle(
-                            fontFamily: 'Inter',
+                            fontFamily: 'Geist',
                             fontSize: 11.5,
                             color: colors.textSecondary,
                           ),
@@ -481,7 +481,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                               child: Text(
                                 'Background',
                                 style: TextStyle(
-                                  fontFamily: 'Inter',
+                                  fontFamily: 'Geist',
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
                                   color: colors.action,
@@ -502,7 +502,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                               child: Text(
                                 'Cancel',
                                 style: TextStyle(
-                                  fontFamily: 'Inter',
+                                  fontFamily: 'Geist',
                                   fontSize: 11.5,
                                   color: colors.textSecondary,
                                 ),
@@ -537,7 +537,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                           child: Text(
                             'Update downloaded and ready',
                             style: TextStyle(
-                              fontFamily: 'Inter',
+                              fontFamily: 'Geist',
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: colors.textPrimary,
@@ -557,7 +557,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       label: Text(
                         'Install Update Now',
                         style: TextStyle(
-                          fontFamily: 'Inter',
+                          fontFamily: 'Geist',
                           fontSize: 13.5,
                           fontWeight: FontWeight.w600,
                           color: colors.onAction,
@@ -582,7 +582,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                   child: Text(
                     'Done',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 12.5,
                       color: colors.textSecondary,
                     ),
@@ -602,7 +602,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                   child: Text(
                     _downloadError!,
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 11.5,
                       height: 1.3,
                       color: colors.textSecondary,
@@ -622,7 +622,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 label: Text(
                   'Download Update ($archLabel APK)',
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: colors.onAction,
@@ -651,7 +651,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                   label: Text(
                     'Download alternate ($otherLabel APK)',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 12.5,
                       fontWeight: FontWeight.w500,
                       color: colors.textPrimary,
@@ -689,7 +689,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                     child: Text(
                       'Release page',
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 12,
                         color: colors.textSecondary,
                         decoration: TextDecoration.underline,
@@ -709,7 +709,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                     child: Text(
                       'Later',
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: colors.textSecondary,

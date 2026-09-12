@@ -195,7 +195,7 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
                   child: Text(
                     'Period ${widget.periodNumber} — ${kDayLabels[widget.dayKey] ?? widget.dayKey}',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                       color: colors.textPrimary,
@@ -229,7 +229,7 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
                 child: Text(
                   _timeError!,
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     fontSize: 12,
                     color: colors.danger,
                   ),
@@ -272,7 +272,7 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
                 child: Text(
                   'Save',
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -300,7 +300,7 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
         Text(
           label,
           style: TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'Geist',
             fontSize: 12,
             fontWeight: FontWeight.w500,
             color: colors.textSecondary,
@@ -312,19 +312,19 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
           textCapitalization: textCapitalization,
           onChanged: onChanged,
           style: TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'Geist',
             fontSize: 15,
             color: colors.textPrimary,
           ),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 15,
               color: colors.borderMuted,
             ),
             errorText: error,
-            errorStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12),
+            errorStyle: const TextStyle(fontFamily: 'Geist', fontSize: 12),
             filled: true,
             fillColor: colors.surfaceContainer,
             border: OutlineInputBorder(
@@ -353,7 +353,7 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
         Text(
           'Class',
           style: TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'Geist',
             fontSize: 12,
             fontWeight: FontWeight.w500,
             color: colors.textSecondary,
@@ -367,19 +367,19 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
           borderRadius: BorderRadius.circular(10),
           icon: Icon(Icons.unfold_more_rounded, size: 18, color: colors.textSecondary),
           style: TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'Geist',
             fontSize: 15,
             color: colors.textPrimary,
           ),
           decoration: InputDecoration(
             hintText: 'Select class',
             hintStyle: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 15,
               color: colors.borderMuted,
             ),
             errorText: _classroomError,
-            errorStyle: const TextStyle(fontFamily: 'Inter', fontSize: 12),
+            errorStyle: const TextStyle(fontFamily: 'Geist', fontSize: 12),
             filled: true,
             fillColor: colors.surfaceContainer,
             border: OutlineInputBorder(
@@ -428,7 +428,7 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
           Text(
             label,
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: colors.textSecondary,
@@ -453,7 +453,7 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
                       time,
                       maxLines: 1,
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 14.5,
                         color: colors.textPrimary,
                       ),

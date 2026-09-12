@@ -91,7 +91,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Import Timing Profile',
-          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -100,7 +100,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
             Text(
               'Paste a shared Jadwal timing profile link or import code below:',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: colors.textSecondary,
               ),
@@ -110,14 +110,14 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               controller: controller,
               maxLines: 3,
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: colors.textPrimary,
               ),
               decoration: InputDecoration(
                 hintText: 'jadwal://profile?data=... or JADWAL_PROFILE:...',
                 hintStyle: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 12,
                   color: colors.borderMuted,
                 ),
@@ -138,7 +138,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               foregroundColor: colors.textSecondary,
               minimumSize: const Size(64, 44),
             ),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
           ),
           FilledButton(
             onPressed: () {
@@ -154,7 +154,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               minimumSize: const Size(90, 44),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Inspect', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+            child: const Text('Inspect', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -248,21 +248,21 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
         title: Text(
           'Apply "${_currentProfile.name}"?',
           style: const TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'Geist',
             fontWeight: FontWeight.w700,
           ),
         ),
         content: Text(
           'This will update start and end times for all matching period slots across Saturday–Thursday in your active timetable.',
           style: TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'Geist',
             color: colors.textSecondary,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -272,7 +272,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
             ),
             child: const Text(
               'Apply Now',
-              style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+              style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -355,7 +355,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text(
           'New Timing Profile',
-          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -364,7 +364,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
             Text(
               'Give your timing profile a recognizable name (e.g. "Winter Timings", "Exam Schedule").',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 13,
                 color: colors.textSecondary,
               ),
@@ -374,7 +374,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               controller: nameController,
               autofocus: true,
               textCapitalization: TextCapitalization.words,
-              style: TextStyle(fontFamily: 'Inter', color: colors.textPrimary),
+              style: TextStyle(fontFamily: 'Geist', color: colors.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Profile Name',
                 filled: true,
@@ -390,7 +390,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
           ),
           FilledButton(
             onPressed: () {
@@ -403,7 +403,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               backgroundColor: colors.action,
               foregroundColor: colors.onAction,
             ),
-            child: const Text('Create', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Create', style: TextStyle(fontFamily: 'Geist')),
           ),
         ],
       ),
@@ -441,13 +441,13 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text(
           'Rename Profile',
-          style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
         ),
         content: TextField(
           controller: nameController,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
-          style: TextStyle(fontFamily: 'Inter', color: colors.textPrimary),
+          style: TextStyle(fontFamily: 'Geist', color: colors.textPrimary),
           decoration: InputDecoration(
             labelText: 'Profile Name',
             filled: true,
@@ -461,7 +461,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
           ),
           FilledButton(
             onPressed: () {
@@ -478,7 +478,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               backgroundColor: colors.action,
               foregroundColor: colors.onAction,
             ),
-            child: const Text('Save', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Save', style: TextStyle(fontFamily: 'Geist')),
           ),
         ],
       ),
@@ -497,16 +497,16 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
       builder: (ctx) => AlertDialog(
         title: Text(
           'Delete "${_currentProfile.name}"?',
-          style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+          style: const TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
         ),
         content: const Text(
           'This timing profile will be removed. Timetable periods currently using these timings will remain unaffected.',
-          style: TextStyle(fontFamily: 'Inter'),
+          style: TextStyle(fontFamily: 'Geist'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
           ),
           TextButton(
             onPressed: () {
@@ -525,7 +525,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               _saveProfiles();
             },
             style: TextButton.styleFrom(foregroundColor: colors.danger),
-            child: const Text('Delete', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+            child: const Text('Delete', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -632,16 +632,16 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
       builder: (ctx) => AlertDialog(
         title: Text(
           'Remove Period $_periodCount?',
-          style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+          style: const TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
         ),
         content: Text(
           'This will decrease the configured periods from $_periodCount to ${_periodCount - 1}.',
-          style: const TextStyle(fontFamily: 'Inter'),
+          style: const TextStyle(fontFamily: 'Geist'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
           ),
           TextButton(
             onPressed: () {
@@ -657,7 +657,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               StorageService.saveTimingProfiles(_profiles);
             },
             style: TextButton.styleFrom(foregroundColor: colors.danger),
-            child: const Text('Remove', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+            child: const Text('Remove', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -690,7 +690,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               Text(
                 'Period Timings',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: colors.textPrimary,
@@ -699,7 +699,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               Text(
                 'Schedule profiles & bulk times',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 12,
                   color: colors.textSecondary,
                 ),
@@ -748,7 +748,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               Text(
                 'PROFILES',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
@@ -759,7 +759,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
               Text(
                 '${_profiles.length} saved',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 11,
                   color: colors.textSecondary,
                 ),
@@ -800,7 +800,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
                           Text(
                             prof.name,
                             style: TextStyle(
-                              fontFamily: 'Inter',
+                              fontFamily: 'Geist',
                               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                               fontSize: 13,
                               color: isSelected ? colors.onAction : colors.textPrimary,
@@ -830,7 +830,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
                   label: Text(
                     'Add New',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: colors.action,
@@ -853,7 +853,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
                   label: Text(
                     'Import',
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: colors.action,
@@ -906,7 +906,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: isApplied ? colors.action : colors.textSecondary,
@@ -1003,7 +1003,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
                 icon: Icon(Icons.remove_rounded, size: 18, color: colors.danger),
                 label: Text(
                   'Remove Period $_periodCount',
-                  style: TextStyle(color: colors.danger, fontFamily: 'Inter'),
+                  style: TextStyle(color: colors.danger, fontFamily: 'Geist'),
                 ),
               ),
           ],
@@ -1052,7 +1052,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
                     child: Text(
                       'Save Profile',
                       maxLines: 1,
-                      style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+                      style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -1069,7 +1069,7 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
                     'Apply to Timetable',
                     maxLines: 1,
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),

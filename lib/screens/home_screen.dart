@@ -260,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         title: Text(
           'Import Timetable for $teacher?',
           style: TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'Geist',
             fontWeight: FontWeight.w700,
             color: colors.textPrimary,
           ),
@@ -268,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         content: Text(
           'This will replace your current timetable with the timetable copied from your clipboard.',
           style: TextStyle(
-            fontFamily: 'Inter',
+            fontFamily: 'Geist',
             color: colors.textSecondary,
           ),
         ),
@@ -277,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
               'Cancel',
-              style: TextStyle(fontFamily: 'Inter', color: colors.textSecondary),
+              style: TextStyle(fontFamily: 'Geist', color: colors.textSecondary),
             ),
           ),
           FilledButton(
@@ -285,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             style: FilledButton.styleFrom(backgroundColor: colors.action),
             child: Text(
               'Import Timetable',
-              style: TextStyle(fontFamily: 'Inter', color: colors.onAction),
+              style: TextStyle(fontFamily: 'Geist', color: colors.onAction),
             ),
           ),
         ],
@@ -368,16 +368,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Notifications Required', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+        title: const Text('Notifications Required', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
         content: const Text(
           'Jadwal needs notification permissions to remind you about your classes. '
           'Please enable notifications in system settings to continue.',
-          style: TextStyle(fontFamily: 'Inter'),
+          style: TextStyle(fontFamily: 'Geist'),
         ),
         actions: [
           TextButton(
             onPressed: () => openAppSettings(),
-            child: const Text('Open Settings', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Open Settings', style: TextStyle(fontFamily: 'Geist')),
           ),
           TextButton(
             onPressed: () async {
@@ -392,7 +392,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 }
               }
             },
-            child: const Text('I\'ve Enabled It', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+            child: const Text('I\'ve Enabled It', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -404,11 +404,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Exact Alarm Permission', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+        title: const Text('Exact Alarm Permission', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
         content: const Text(
           'Jadwal needs "Alarms & reminders" permission to send notifications at the exact time before each class.\n\n'
           'Please enable "Alarms & reminders" in the settings screen, then come back and tap "I\'ve Enabled It".',
-          style: TextStyle(fontFamily: 'Inter'),
+          style: TextStyle(fontFamily: 'Geist'),
         ),
         actions: [
           TextButton(
@@ -423,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 await openAppSettings();
               }
             },
-            child: const Text('Open Settings', style: TextStyle(fontFamily: 'Inter')),
+            child: const Text('Open Settings', style: TextStyle(fontFamily: 'Geist')),
           ),
           TextButton(
             onPressed: () async {
@@ -441,7 +441,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 }
               }
             },
-            child: const Text('I\'ve Enabled It', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+            child: const Text('I\'ve Enabled It', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -730,7 +730,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   child: Text(
                     _teacherName.isEmpty ? 'Today' : _teacherName,
                     style: TextStyle(
-                      fontFamily: 'Inter',
+                      fontFamily: 'Geist',
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                       color: colors.textPrimary,
@@ -743,9 +743,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               _appBarSubtitle,
               key: ValueKey(_appBarSubtitle),
               style: TextStyle(
-                fontFamily: 'PlayfairDisplay',
-                fontStyle: FontStyle.italic,
-                fontSize: 12.5,
+                fontFamily: 'Geist',
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
                 color: colors.textSecondary,
               ),
             ).animate().fadeIn(duration: 200.ms),
@@ -986,7 +986,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           child: Text(
             label,
             style: TextStyle(
-              fontFamily: 'Inter',
+              fontFamily: 'Geist',
               fontSize: 14,
               color: colors.textPrimary,
             ),
@@ -1031,7 +1031,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Text(
               title,
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: colors.textPrimary,
@@ -1042,7 +1042,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               subtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 13.5,
                 color: colors.textSecondary,
               ),
@@ -1094,7 +1094,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Text(
               'Rest Day',
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: colors.textPrimary,
@@ -1105,7 +1105,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               "It's Friday — no classes scheduled. Enjoy your day off!",
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'Inter',
+                fontFamily: 'Geist',
                 fontSize: 13.5,
                 color: colors.textSecondary,
               ),

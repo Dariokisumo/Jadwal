@@ -62,7 +62,7 @@ class ProfileImportDialog extends StatelessWidget {
                 Text(
                   'Add Timing Profile?',
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: colors.textPrimary,
@@ -71,7 +71,7 @@ class ProfileImportDialog extends StatelessWidget {
                 Text(
                   'Shared via Jadwal',
                   style: TextStyle(
-                    fontFamily: 'Inter',
+                    fontFamily: 'Geist',
                     fontSize: 12,
                     color: colors.textSecondary,
                   ),
@@ -104,7 +104,7 @@ class ProfileImportDialog extends StatelessWidget {
                     Text(
                       profile.name,
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: colors.textPrimary,
@@ -114,7 +114,7 @@ class ProfileImportDialog extends StatelessWidget {
                     Text(
                       '$slotCount periods • $timeSpan',
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 13,
                         color: colors.textSecondary,
                       ),
@@ -128,7 +128,7 @@ class ProfileImportDialog extends StatelessWidget {
               Text(
                 'SLOT PREVIEW',
                 style: TextStyle(
-                  fontFamily: 'Inter',
+                  fontFamily: 'Geist',
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
@@ -160,7 +160,7 @@ class ProfileImportDialog extends StatelessWidget {
                         Text(
                           'Period $pNum',
                           style: TextStyle(
-                            fontFamily: 'Inter',
+                            fontFamily: 'Geist',
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: colors.textPrimary,
@@ -170,7 +170,7 @@ class ProfileImportDialog extends StatelessWidget {
                         Text(
                           '${times[0]} – ${times[1]}',
                           style: TextStyle(
-                            fontFamily: 'Inter',
+                            fontFamily: 'Geist',
                             fontSize: 12,
                             color: colors.textSecondary,
                           ),
@@ -196,7 +196,7 @@ class ProfileImportDialog extends StatelessWidget {
                     child: Text(
                       'This will be added to your saved timing profiles. It will not alter your active timetable until you choose to apply it.',
                       style: TextStyle(
-                        fontFamily: 'Inter',
+                        fontFamily: 'Geist',
                         fontSize: 12,
                         height: 1.35,
                         color: colors.textSecondary,
@@ -216,7 +216,7 @@ class ProfileImportDialog extends StatelessWidget {
             foregroundColor: colors.textSecondary,
             minimumSize: const Size(64, 44),
           ),
-          child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter')),
+          child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
         ),
         FilledButton(
           onPressed: onConfirm,
@@ -228,7 +228,7 @@ class ProfileImportDialog extends StatelessWidget {
           ),
           child: const Text(
             'Add to Profiles',
-            style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600),
           ),
         ),
       ],
