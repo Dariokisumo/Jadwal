@@ -1,270 +1,253 @@
-# APK Build Configuration — Jadwal
+# APK Build Configuration & Automation Guide — Jadwal
 
-## CRITICAL: Do NOT clean caches unless explicitly approved
+This document is the authoritative APK build guide, environment record, optimization reference, and automation specification for the **Jadwal** project.
 
-Running `flutter clean` or clearing `~/.gradle/caches/` / `~/.pub-cache/` forces a full
-cold rebuild (~15-20 min download + compile). **Always ask the user before doing this.**
+> **CRITICAL RULE:** Do **NOT** run `flutter clean` or wipe `~/.gradle/caches/` unless explicitly approved by the user. Caches persist across builds and allow consecutive incremental builds to finish in **12–30 seconds**. A cold rebuild from scratch takes **15–20 minutes**.
 
-**The only** valid reason to clean: deps changed AND quick rebuild fails.
+---
 
-## Use Makefile (recommended)
-```bash
-make build          # arm64-v8a -> Apk files/ (default)
-make build-arm32    # armeabi-v7a -> Apk files/apk32/
-make copy           # just copy existing arm64 APK to Apk files/
-make copy-arm32     # just copy existing arm32 APK to Apk files/apk32/
-make clean          # flutter clean (DON'T without asking)
-```
+## 1. Environment Record
 
-The Makefile uses `--android-skip-build-dependency-validation --no-tree-shake-icons --no-pub`.
-JAVA_HOME points to **JDK 17** (`/home/node/.gradle/jdks/eclipse_adoptium-17-amd64-linux.2`).
+All tool paths, environment variables, and versions have been verified and dynamically mapped.
 
-## Manual Build (when Makefile not available)
-```bash
-cd /home/node/Documents/Lark/jadwal
-# arm64 (default)
-flutter build apk --release --target-platform android-arm64
-cp build/app/outputs/flutter-apk/app-release.apk \
-  "Apk files/jadwal-v$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')-$(grep '^version:' pubspec.yaml | sed 's/.*+//')-release.apk"
+### Verified Tooling & Paths
 
-# arm32 (armeabi-v7a) -> Apk files/apk32/
-flutter build apk --release --target-platform android-arm
-cp build/app/outputs/flutter-apk/app-release.apk \
-  "Apk files/apk32/jadwal-v$(grep '^version:' pubspec.yaml | sed 's/version: //; s/+.*//')-$(grep '^version:' pubspec.yaml | sed 's/.*+//')-release.apk"
-# Note: also swap abiFilters in android/app/build.gradle (arm64-v8a <-> armeabi-v7a)
-# and packagingOptions excludes accordingly. Makefile does this automatically.
-```
+| Component | Path / Discovery Priority | Version | Notes |
+| :--- | :--- | :--- | :--- |
+| **JDK (Target)** | `/home/node/.gradle/jdks/eclipse_adoptium-17-amd64-linux.2` | Temurin OpenJDK 17.0.19+10 | Required for AGP 8.7.0 & Gradle 8.14.2 stability |
+| **JDK (System)** | `/usr/lib/jvm/java-21-openjdk-amd64` | OpenJDK 21.0.12 | Available system-wide |
+| **`java`** | `${JAVA_HOME}/bin/java` | 17.0.19 / 21.0.12 | Pre-tested and verified executable |
+| **`javac`** | `${JAVA_HOME}/bin/javac` | 17.0.19 / 21.0.12 | Pre-tested and verified executable |
+| **Android SDK** | `/usr/lib/android-sdk` (`sdk.dir` in `local.properties`) | SDK 34, 35, 36 | Secondary at `/home/node/android-sdk` |
+| **Build Tools** | `/usr/lib/android-sdk/build-tools/36.0.0` | 36.0.0 (also 35, 34, 33) | In `PATH` |
+| **Platform Tools** | `/usr/lib/android-sdk/platform-tools/adb` | 1.0.41 (SDK 37.0.0) | In `PATH` |
+| **Android NDK** | `/usr/lib/android-sdk/ndk/28.2.13676358` | 28.2, 27.1, 26.3, 26.1 | Multiple NDK revisions available |
+| **Gradle Wrapper** | `android/gradlew` | Gradle 8.14.2-all | Wrapper dist cached locally in `~/.gradle/wrapper/dists/` |
+| **Android Gradle Plugin** | Plugin `com.android.application` in `android/settings.gradle` | 8.7.0 | Fully cached in `modules-2` |
+| **Kotlin** | Plugin `org.jetbrains.kotlin.android` | 2.1.0 | Compose plugin `2.1.0` applied |
+| **Flutter SDK** | `/home/node/.flutter/bin/flutter` | 3.44.2 stable | Framework rev `c9a6c48423`, Engine `04efd7c093` |
+| **Dart SDK** | `/home/node/.flutter/bin/dart` | 3.12.2 stable | Linux x64 |
+| **`aapt2`** | `/usr/lib/android-sdk/build-tools/36.0.0/aapt2` | 2.20-13193326 | Asset packaging tool |
+| **`zipalign`** | `/usr/lib/android-sdk/build-tools/36.0.0/zipalign` | 36.0.0 | APK alignment tool |
+| **`apksigner`** | `/usr/lib/android-sdk/build-tools/36.0.0/apksigner` | 0.9 (v2 scheme) | APK signing and verification tool |
 
-**No `flutter clean` or `pub get` needed** — caches persist across builds.
+### Environment Variables
 
-## Last Resort: Full Rebuild (ASK USER FIRST)
-```bash
-flutter clean
-flutter pub get
-flutter build apk --release --target-platform android-arm64
-# ...copy command same as above
-```
-
-## Cached Artifacts (after a successful build)
-
-Everything is NOW cached — a second build recompiles only changed Dart (~30-60s).
-
-### Which Gradle versions are cached
-
-| Status | Version | Location |
-|--------|---------|----------|
-| ✅ Fully cached | **8.14.2** (project default) | `~/.gradle/wrapper/dists/gradle-8.14.2-all/` (224MB .zip) |
-| ✅ Fully cached | **9.1.0** (fallback) | `~/.gradle/wrapper/dists/gradle-9.1.0-all/` |
-| ✅ Fully cached | **9.3.1** (bin only) | `~/.gradle/wrapper/dists/gradle-9.3.1-bin/` |
-
-### Which AGP versions are cached (`modules-2`)
-
-| Version | Cached? | Notes |
-|---------|---------|-------|
-| 8.7.0 | ✅ | Project default — fully cached after first build |
-| 9.0.1 | ✅ | Available as fallback if ever needed |
-
-### Which Kotlin versions are cached
-
-| Version | Plugin marker | Compiler |
-|---------|:------------:|:--------:|
-| 2.1.0 | ✅ (project default) | ✅ |
-| 2.2.20 | ❌ | ✅ |
-| 2.3.20 | ✅ | ✅ |
-| others | ❌ | 1.7.10, 1.9.0, 1.9.10 |
-
-**Compose plugin** (`org.jetbrains.kotlin.plugin.compose`) — NOT cached for any version.
-First build will download it (~2MB). After first download it is cached.
-
-### What's in `~/.gradle/caches/`
-
-```
-~/.gradle/caches/
-├── 8.14.2/               # Gradle version-specific cache (transforms, etc.)
-├── 9.1.0/                # Fallback Gradle version cache
-├── modules-2/            # Shared dependency JARs/AARs (AGP, Kotlin, AndroidX, Compose, Glance)
-└── jars-9/               # Gradle-internal jars
-```
-
-| Cache | Location | Purpose |
-|-------|----------|---------|
-| Gradle Module Cache | `~/.gradle/caches/modules-2/` | AGP, Kotlin, AndroidX, Compose, Glance — ~2GB |
-| Gradle Transforms | `~/.gradle/caches/<version>/transforms/` | Processed AARs/JARs |
-| Gradle Wrapper | `~/.gradle/wrapper/dists/` | Gradle binaries (8.14.2 + 9.1.0 + 9.3.1) |
-| Flutter Build | `build/` | Compiled Dart AOT, merged manifests |
-| Flutter SDK | `~/.flutter/bin/cache/` | Dart SDK, engine, platform files (~820MB) |
-| Pub Cache | `~/.pub-cache/` | All Dart/Flutter packages (~900MB) |
-
-## Key Paths
-| Item | Path |
-|------|------|
-| Flutter SDK | `/home/node/.flutter/bin/flutter` |
-| Android SDK | `/home/node/android-sdk` |
-| Platform tools | `/home/node/android-sdk/platform-tools` |
-| Platforms | 34, 35, 36 |
-| Build tools | 34.0.0, 35.0.0, 36.0.0 |
-| NDK | `/home/node/android-sdk/ndk/` (26.1.10909125, 28.2.13676358) |
-| JDK (system) | `/usr/lib/jvm/java-21-openjdk-amd64` |
-| JDK (Makefile) | `/home/node/.gradle/jdks/eclipse_adoptium-17-amd64-linux.2` |
-| Build output | `build/app/outputs/flutter-apk/` |
-| Release folder (arm64) | `Apk files/` |
-| Release folder (arm32) | `Apk files/apk32/` |
-
-## Speed Tips
-
-- **Gradle parallel + caching** — `gradle.properties` enables `org.gradle.parallel=true` and `org.gradle.caching=true`. Parallel runs independent tasks concurrently; caching reuses unchanged task outputs across builds. Big wins (30-50% on rebuilds).
-- **`-XX:+UseParallelGC`** — JVM flag in `gradle.properties` uses the parallel garbage collector (faster for batch-style Gradle work than G1GC).
-- **Skip `flutter pub get`** if deps unchanged — `--no-pub` is already in the Makefile.
-- **Gradle daemon** stays alive between builds — first build warms it, subsequent builds reuse it.
-- **Flutter incremental** — only changed Dart files recompile (~30-60s). Avoid `flutter clean`.
-- **`--android-skip-build-dependency-validation`** (in Makefile) skips AGP/Kotlin version checks — saves ~5s.
-- **`--no-tree-shake-icons`** (in Makefile) skips icon tree-shaking — saves ~10s
-- **`--no-shrink`** (in Makefile) skips R8/ProGuard — saves ~30-60s on release builds.
-- **Lint disabled for release builds** — `checkReleaseBuilds false` in `app/build.gradle` saves ~30-60s.
-
-## Pre-Build Warmup (critical for speed)
-
-If the Gradle daemon is cold (e.g. after reboot or OOM kill), **always warm it first**:
+The portable scripts automatically discover and export:
 
 ```bash
-cd android && ./gradlew --daemon --offline tasks > /dev/null 2>&1
+export JAVA_HOME="/home/node/.gradle/jdks/eclipse_adoptium-17-amd64-linux.2"
+export ANDROID_HOME="/usr/lib/android-sdk"
+export ANDROID_SDK_ROOT="/usr/lib/android-sdk"
+export ANDROID_NDK_ROOT="/usr/lib/android-sdk/ndk/28.2.13676358"
+export PATH="${JAVA_HOME}/bin:${ANDROID_HOME}/build-tools/36.0.0:${ANDROID_HOME}/platform-tools:${PATH}"
 ```
 
-Then build with `make build`. This cuts build time from ~3min to ~1min.
+---
 
-**Check daemon status:** `./gradlew --status` — should show `RUNNING`, not `STOPPED`.
+## 2. Build Architecture
 
-## JVM Heap
+- **Root Project**: `/home/node/Documents/Lark/Jadwal`
+- **Host Module**: `android/` (with main application module `android/app`)
+- **Bytecode Target**: Java 11 (`sourceCompatibility = JavaVersion.VERSION_11`, `targetCompatibility = JavaVersion.VERSION_11`)
+- **Desugaring**: `com.android.tools:desugar_jdk_libs:2.0.4` enabled for backward-compatible `java.time` APIs used by `flutter_local_notifications`.
+- **Compose & Glance**:
+  - `androidx.glance:glance-appwidget:1.1.1` & `glance-material3:1.1.1` for native home screen widgets (`JadwalGlanceWidget.kt`).
+  - `androidx.compose:compose-bom:2024.12.01`.
+- **Target Platforms / ABIs**:
+  - **arm64-v8a** (Primary 64-bit release target): `--target-platform android-arm64` (~24.5 MB).
+  - **armeabi-v7a** (32-bit release target): `--target-platform android-arm` (~22.1 MB).
+  - Native libraries for other ABIs (`x86`, `x86_64`) are excluded in `android/app/build.gradle` to minimize APK payload size.
+- **Signing**: Release builds use debug keystore signing (`signingConfigs.debug`) for straightforward direct APK side-loading and GitHub release distribution.
+- **Output Directories**:
+  - 64-bit APKs: `Apk files/jadwal-v<VERSION>-<BUILD>-release.apk`
+  - 32-bit APKs: `Apk files/apk32/jadwal-v<VERSION>-<BUILD>-release.apk`
 
-`gradle.properties` must have adequate heap. **Do not go below `-Xmx8G`** — 4G causes OOM kills (exit code 143) which kills the daemon and forces a cold restart on the next build:
+---
 
-```
-org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=1G -XX:+UseParallelGC
-```
+## 3. Cache Strategy & Reusable State
 
-## Offline Build
+### Cache Inventory
 
-`flutter build apk` has **no `--offline` flag**. To build offline:
-- Set `org.gradle.offline=true` in `android/gradle.properties` (Gradle won't fetch deps)
-- Use `--no-pub` to skip `flutter pub get`
-- The Makefile relies on Gradle's offline mode via `gradle.properties`
+| Cache | Location | Size | Strategy |
+| :--- | :--- | :--- | :--- |
+| **Gradle Dependency Cache** | `~/.gradle/caches/modules-2/` | ~2.0 GB | **PRESERVE**: Contains AGP, Kotlin, Compose, Glance, AndroidX |
+| **Gradle Transforms / Daemon Cache** | `~/.gradle/caches/8.14.2/` | ~2.8 GB | **PRESERVE**: Transformed AARs, execution history, incremental metadata |
+| **Gradle Build Cache** | `~/.gradle/caches/build-cache-1/` | ~168 MB | **PRESERVE**: Reusable task output artifacts across builds |
+| **Gradle Wrapper Distributions** | `~/.gradle/wrapper/dists/` | ~300 MB | **PRESERVE**: Cached Gradle 8.14.2 binaries |
+| **Flutter Build Intermediates** | `build/` | ~570 MB | **PRESERVE**: Compiled Dart kernel snapshot and merged Android intermediates |
+| **Pub Cache** | `~/.pub-cache/` | ~900 MB | **PRESERVE**: Downloaded Dart package sources |
 
-## Pre-Build Warmup (saves ~2min)
+### Rules for Caches
+1. **Never delete `~/.gradle/` or `build/`** during regular development.
+2. The Gradle Daemon remains running (`PID 229052` or newest) in the background. It keeps JVM JIT optimizations warm.
+3. Clean builds (`flutter clean`) should only be run if dependencies changed and an incremental build failed with an unresolvable corruption.
 
-If the Gradle daemon is cold (check with `./gradlew --status`), warm it first:
+---
+
+## 4. Build Optimizations Applied
+
+The following optimizations are actively configured:
+
+1. **Gradle Parallel Execution (`org.gradle.parallel=true`)**: Concurrently runs independent subproject tasks.
+2. **Gradle Build Caching (`org.gradle.caching=true`)**: Reuses outputs from previous task executions.
+3. **Configure on Demand (`org.gradle.configureondemand=true`)**: Only configures projects relevant to the requested task.
+4. **Offline Mode (`org.gradle.offline=true`)**: Skips outbound network calls to repository mirrors on every build.
+5. **High JVM Heap (`org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=1G -XX:+UseParallelGC`)**: Prevents OOM kills (exit code 143) and uses the high-throughput parallel garbage collector.
+6. **Skip Pub Resolution (`--no-pub`)**: Prevents `flutter build` from re-analyzing `pubspec.lock` on every compile.
+7. **Skip Icon Tree-Shaking (`--no-tree-shake-icons`)**: Cuts icon raster analysis time (~10s savings).
+8. **Skip AGP Validation (`--android-skip-build-dependency-validation`)**: Skips redundant version checking (~5s savings).
+9. **Skip R8 Shrinking (`--no-shrink`)**: Enabled by default in development/release builds for blazing **12–20s rebuild times**.
+10. **Release Lint Check Disabled (`checkReleaseBuilds false`)**: Saves 30–60s on every release assemble pass.
+
+---
+
+## 5. Shell Automation Scripts (`scripts/`)
+
+All build operations are automated via robust, portable bash scripts in `scripts/`:
+
+### `scripts/common-env.sh`
+- **Purpose**: Sourced by all scripts. Dynamically locates the JDK, Android SDK, build tools, NDK, Flutter SDK, Gradlew, and version info without hardcoding fragile absolute paths.
+- **Portability**: Adapts to any environment with standard search orders.
+
+### `scripts/verify-env.sh`
+- **Purpose**: Pre-flight audit that validates all tools, executables, paths, Gradle daemon state, ABI filter consistency, and RAM/disk availability.
+- **Run**:
+  ```bash
+  ./scripts/verify-env.sh
+  # or via Makefile
+  make verify
+  ```
+
+### `scripts/build-apk.sh`
+- **Purpose**: Primary incremental build engine.
+- **Flags**:
+  - `--arm64`: Build 64-bit APK (`Apk files/`) [default]
+  - `--arm32`: Build 32-bit APK (`Apk files/apk32/`)
+  - `--both`: Build both arm64 and arm32 in sequence
+  - `--copy-only`: Instant copy of existing built APK without invoking Gradle
+  - `--no-shrink`: Skip R8 minification for fast builds [default]
+  - `--shrink`: Enable R8 minification
+  - `--pub`: Run `flutter pub get` before build
+- **Safety Trap**: Automatically registers a `trap` for `--arm32` builds to guarantee `android/app/build.gradle` is reverted back to `arm64-v8a` even if interrupted (Ctrl+C) or errored.
+- **Run**:
+  ```bash
+  ./scripts/build-apk.sh --arm64       # Fast 64-bit build
+  ./scripts/build-apk.sh --arm32       # Fast 32-bit build
+  ./scripts/build-apk.sh --both        # Sequential build for both ABIs
+  ./scripts/build-apk.sh --copy-only   # Instant copy existing artifact
+  ```
+
+### `scripts/bump-version.sh`
+- **Purpose**: Synchronously bumps semantic versioning across both `pubspec.yaml` and `lib/constants/app_version.dart`.
+- **Run**:
+  ```bash
+  ./scripts/bump-version.sh patch      # e.g. 2.9.2+55 -> 2.9.3+56
+  ./scripts/bump-version.sh minor      # e.g. 2.9.2+55 -> 2.10.0+56
+  ./scripts/bump-version.sh major      # e.g. 2.9.2+55 -> 3.0.0+56
+  ./scripts/bump-version.sh set 2.9.3 56
+  ./scripts/bump-version.sh get
+  ```
+
+### `scripts/diagnose.sh`
+- **Purpose**: Diagnostic tool to detect stuck ABI filters, cold daemons, memory constraints, and missing cached artifacts.
+- **Flags**:
+  - `--warmup`: Warms up the Gradle daemon in background
+  - `--fix-abi`: Forces `android/app/build.gradle` back to `arm64-v8a`
+- **Run**:
+  ```bash
+  ./scripts/diagnose.sh
+  ./scripts/diagnose.sh --warmup
+  ```
+
+### `scripts/apk-info.sh`
+- **Purpose**: Inspects generated APK badging, version codes, native ABIs, and cryptographically verifies signature schemes using `aapt2` and `apksigner`.
+- **Run**:
+  ```bash
+  ./scripts/apk-info.sh                # Inspects newest built APK
+  ./scripts/apk-info.sh "Apk files/jadwal-v2.9.2-55-release.apk"
+  ```
+
+---
+
+## 6. Makefile Command Reference
+
+The `Makefile` preserves 100% backward compatibility with previous workflows:
 
 ```bash
-cd android && ./gradlew --daemon --offline tasks > /dev/null 2>&1
-cd .. && make build
+make build          # Build arm64-v8a APK -> Apk files/ (~12-30s)
+make build-arm32    # Build armeabi-v7a APK -> Apk files/apk32/ (~40-60s)
+make build-both     # Build arm64 and arm32 sequentially
+make copy           # Instant copy existing arm64 build to Apk files/
+make copy-arm32     # Instant copy existing arm32 build to Apk files/apk32/
+make verify         # Run complete build environment verification
+make diagnose       # Run diagnostics and daemon health check
+make info           # Inspect latest generated APK with aapt2 and apksigner
+make bump-patch     # Bump patch version in pubspec.yaml and app_version.dart
+make bump-minor     # Bump minor version in pubspec.yaml and app_version.dart
+make bump-major     # Bump major version in pubspec.yaml and app_version.dart
+make clean          # flutter clean (ASK FIRST per critical rule!)
 ```
 
-Cold build (no daemon): ~3min. Warm daemon + incremental: ~30-60s.
+---
 
-## JVM Heap — Critical
+## 7. Versioning Workflow
 
-`gradle.properties` must have adequate heap. **`-Xmx4G` causes OOM kills** (exit code 143) which kills the daemon and forces a cold restart. Use at least 8G:
+Version information is maintained in two synchronized files:
+1. `pubspec.yaml` line 4: `version: MAJOR.MINOR.PATCH+BUILD` (e.g. `2.9.2+55`)
+2. `lib/constants/app_version.dart`:
+   ```dart
+   const String kAppVersion = '2.9.2';
+   const int kAppBuildNumber = 55;
+   ```
 
-```
-org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=1G -XX:+UseParallelGC
-```
+### Version Bumping Rules
+- **Patch** (`1.0.X`): Bug fixes, layout tweaks, performance adjustments.
+- **Minor** (`1.X.0`): New features, UI redesigns, theme updates.
+- **Major** (`X.0.0`): Architecture changes, schema migrations.
+- Always run `make bump-patch` or `make bump-minor` before building release APKs.
 
-## Offline Build
+---
 
-`flutter build apk` has **no `--offline` flag**. To build fully offline:
-- Set `org.gradle.offline=true` in `android/gradle.properties` (already done)
-- Use `--no-pub` to skip `flutter pub get` (already in Makefile)
-- Ensure all deps are cached from a previous successful build
+## 8. Build Workflow & Speed Comparison
 
-## APK Size Reduction
+### Cold vs. Warm Performance
 
-Removed unused native libraries — one ABI per APK:
-- **arm64** (`Apk files/`): `ndk { abiFilters "arm64-v8a" }`, `packagingOptions` excludes `lib/x86_64/**`, `lib/armeabi-v7a/**`, etc. Final: ~23.8-24.5MB
-- **arm32** (`Apk files/apk32/`): `ndk { abiFilters "armeabi-v7a" }`, `packagingOptions` excludes `lib/arm64-v8a/**`, `lib/x86_64/**`, etc. Final: ~21.9MB
-- `make build-arm32` swaps `abiFilters` + `packagingOptions` automatically, builds, then restores arm64 default.
-- Saved ~240KB per APK vs fat build. `build.gradle` defaults to `arm64-v8a` after build.
+| Scenario | Duration | Tasks |
+| :--- | :--- | :--- |
+| **Cold Build (Clean cache / no daemon)** | ~15–20 min | Downloads Gradle, AGP, Kotlin, Compose, compiles from scratch |
+| **Warm Daemon (First build after edit)** | ~50–70s | Compiles changed Dart + reassembles APK |
+| **Consecutive Rebuild (Warm cache & daemon)** | **12–14s** | Incremental Dart rebuild + APK packaging |
+| **Copy existing build (`make copy`)** | **< 1s** | Direct file copy |
 
-**All Compose/Glance deps are required** — the home screen widget (`JadwalGlanceWidget.kt`) uses Glance + Compose. `coreLibraryDesugaring` is required by `flutter_local_notifications`. `uses-material-design: true` is required for 34 Material icons..
+---
 
-## Version
+## 9. Diagnostics & Troubleshooting Matrix
 
-Current: `2.1.2+40` (in `pubspec.yaml`)
+### 1. `Toolchain installation does not provide the required capabilities: [JAVA_COMPILER]`
+- **Cause**: Gradle attempting to use an incompatible system JDK (e.g. JDK 21 toolchain mismatch).
+- **Fix**: The scripts automatically set `JAVA_HOME=/home/node/.gradle/jdks/eclipse_adoptium-17-amd64-linux.2`. Run `./scripts/verify-env.sh` to confirm.
 
-Edit `pubspec.yaml` line 4 — version format: `MAJOR.MINOR.PATCH+BUILD`
-- Display: `MAJOR.MINOR.PATCH` (e.g. `1.8.2`)
-- Build number: `+BUILD` — must increase each release (e.g. `+26`)
-- Example: `1.8.1+24` → `1.8.2+25`
+### 2. Gradle Daemon OOM (Exit code 143)
+- **Cause**: Daemon heap too low for Compose/Glance compiler plugins.
+- **Fix**: Ensure `android/gradle.properties` has `org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=1G -XX:+UseParallelGC`. Do not lower below 8G.
 
-APK picks up version automatically from pubspec — no manual Android edits.
+### 3. ABI stuck on `armeabi-v7a`
+- **Cause**: Previous arm32 build was killed before restoration.
+- **Fix**: Run `./scripts/diagnose.sh --fix-abi`.
 
-## Output
-- `Apk files/jadwal-v2.1.2-40-release.apk` (arm64-v8a only, ~24.8MB) — `make build`
-- `Apk files/apk32/jadwal-v2.1.2-40-release.apk` (armeabi-v7a only, ~22.2MB) — `make build-arm32`
+### 4. Gradle Wrapper fails to download in offline mode
+- **Cause**: `distributionUrl` pointing to a version not cached in `~/.gradle/wrapper/dists/`.
+- **Fix**: Ensure `gradle-8.14.2-all.zip` is specified in `android/gradle/wrapper/gradle-wrapper.properties`.
 
-## GitHub Releases & Sync Policy ("Git it")
+---
 
-**CRITICAL RULE:** Do NOT automatically commit, push to GitHub, or create/update releases on GitHub after code edits or builds.
-Only sync with GitHub and publish releases when the user explicitly says: **"Git it"**.
+## 10. GitHub Releases Policy ("Git it")
+
+**CRITICAL RULE:** Do NOT commit, push to GitHub, or create/update GitHub releases automatically after code edits.
+Only update GitHub and its releases section when the user explicitly gives the command: **"Git it"**.
 
 When the user says **"Git it"**:
-1. Commit local code changes with a clean, descriptive message.
-2. Push commits and any local tags to the remote repository.
-3. If new APKs exist for a bumped version, create a GitHub release with a formatted changelog and upload both the 64-bit (`arm64`) and 32-bit (`arm32`) APK assets.
-
-## Build Issues & Fixes
-
-### 1. Offline build fails — Gradle wrapper can't download
-- **Symptoms:** `UnknownHostException: services.gradle.org` or `PluginResolutionException`
-- **Root cause:** Gradle wrapper tries to download the `.zip` distribution; cached version doesn't match `gradle-wrapper.properties`
-- **Fix:** Point wrapper to a cached Gradle version:
-  ```bash
-  # Check what's cached:
-  ls ~/.gradle/wrapper/dists/
-  # Edit android/gradle/wrapper/gradle-wrapper.properties:
-  # distributionUrl=https\://services.gradle.org/distributions/gradle-9.1.0-all.zip
-  ```
-
-### 2. Offline build fails — AGP not cached
-- **Symptoms:** `Plugin [id: 'com.android.application', version: '8.7.0'] was not found`
-- **Fix:** Use cached AGP version or ensure network: 
-  ```bash
-  # Check cached AGP:
-  ls ~/.gradle/caches/modules-2/files-2.1/com.android.application/com.android.application.gradle.plugin/
-  # Edit android/settings.gradle to use cached version (e.g. 9.0.1)
-  ```
-
-### 3. Offline build fails — Compose/Glance deps not cached
-- **Symptoms:** Missing `androidx.compose` or `androidx.glance` artifacts
-- **Root cause:** Compose/Glance are NOT in `modules-2` after fresh cache — they live in Gradle version-specific cache. First successful build downloads them.
-- **Fix:** Need internet for first build after cache clean.
-
-### 4. Offline build fails — Kotlin compose plugin not cached
-- **Symptoms:** `Plugin [id: 'org.jetbrains.kotlin.plugin.compose'] was not found`
-- **Root cause:** Compose plugin marker (~2MB) is never cached offline
-- **Fix:** Need internet for at least one build.
-
-### 5. DNS resolution flaky
-- **Symptoms:** `plugins-artifacts.gradle.org: Name or service not known`
-- **Fix:** Retry build — DNS works intermittently.
-- **Workaround:** Add `--android-skip-build-dependency-validation` to skip AGP/Kotlin version checks (already in Makefile).
-
-### 6. Gradle JDK toolchain detection failure
-- **Error:** `Toolchain installation does not provide the required capabilities: [JAVA_COMPILER]`
-- **Fix:** Set `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64` before build.
-- The Makefile uses JDK 17 which works without this issue.
-
-### 7. ABI split conflict with NDK abiFilters
-- **Fix:** Use `--target-platform android-arm64` flag (already in command).
-
-## What to do when caches are clean (first build on fresh machine)
-
-1. Ensure **internet is available**
-2. Run `make build` (or the manual build command)
-3. First build takes **5-10 min** (downloads Gradle 8.14.2, AGP 8.7.0, Kotlin 2.1.0, Compose BOM, Glance, all transitive deps)
-4. Subsequent builds take **30-60s**
-
-## What files were modified / settings
-- `pubspec.yaml` — version, Compose/Glance deps (from Flutter project template)
-- `android/settings.gradle` — AGP 8.7.0, Kotlin 2.1.0, Kotlin compose plugin 2.1.0, Flutter plugin loader
-- `android/app/build.gradle` — release signing (debug), minification, ProGuard, lint disabled for releases (`checkReleaseBuilds false`), Compose, Glance widget deps
-- `android/gradle.properties` — JVM args (8G heap, `-XX:+UseParallelGC`), parallel execution (`org.gradle.parallel=true`), build caching (`org.gradle.caching=true`), AndroidX flags
-- `android/gradle/wrapper/gradle-wrapper.properties` — points to Gradle 8.14.2-all
+1. Stage and commit the changed code with a clear descriptive commit message.
+2. Push the commit(s) and any new tags to the remote repository (`origin main`).
+3. If new APKs were built for a new version, publish the GitHub release with the changelog and upload both the 64-bit (`arm64`) and 32-bit (`arm32`) APK assets.

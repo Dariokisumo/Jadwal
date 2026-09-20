@@ -265,12 +265,14 @@ class _MiscScreenState extends State<MiscScreen> {
                       color: colors.textSecondary,
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.xs),
+
                   // Option 1: Saved Timetables
                   _buildOptionCard(
                     icon: Icons.folder_special_rounded,
                     title: 'Saved Timetables',
-                    subtitle: '$_savedTimetablesCount saved schedules • switch, export & backup',
-                    trailingBadge: _activeTimetableName,
+                    subtitle: 'Active: $_activeTimetableName',
+                    trailingBadge: '$_savedTimetablesCount saved',
                     onTap: _openSavedTimetables,
                     colors: colors,
                   ),
@@ -280,7 +282,7 @@ class _MiscScreenState extends State<MiscScreen> {
                   _buildOptionCard(
                     icon: Icons.schedule_rounded,
                     title: 'Period Timings',
-                    subtitle: 'Manage time slots, saved schedules & bulk update',
+                    subtitle: 'Bell schedules and period durations',
                     trailingBadge: _activeProfileName,
                     onTap: _openPeriodTimings,
                     colors: colors,
@@ -291,7 +293,7 @@ class _MiscScreenState extends State<MiscScreen> {
                   _buildOptionCard(
                     icon: Icons.view_column_rounded,
                     title: 'Periods per Day',
-                    subtitle: 'Configure number of period columns',
+                    subtitle: 'Daily period slot capacity (1–15)',
                     trailingBadge: '$_periodCount periods',
                     onTap: _showPeriodCountDialog,
                     colors: colors,
@@ -383,9 +385,12 @@ class _MiscScreenState extends State<MiscScreen> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 15,
@@ -396,9 +401,12 @@ class _MiscScreenState extends State<MiscScreen> {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 12,
+                      height: 1.3,
                       color: colors.textSecondary,
                     ),
                   ),
@@ -406,7 +414,9 @@ class _MiscScreenState extends State<MiscScreen> {
               ),
             ),
             if (trailingBadge != null) ...[
+              const SizedBox(width: 8),
               Container(
+                constraints: const BoxConstraints(maxWidth: 120),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: colors.surfaceContainerHighest,
@@ -414,6 +424,8 @@ class _MiscScreenState extends State<MiscScreen> {
                 ),
                 child: Text(
                   trailingBadge,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 12,
