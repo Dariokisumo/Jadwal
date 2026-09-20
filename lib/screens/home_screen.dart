@@ -17,15 +17,17 @@ import '../services/deep_link_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/update_service.dart';
+import '../models/saved_timetable.dart';
 import '../services/widget_data_service.dart';
 import '../theme/relational_colors.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/break_indicator.dart';
 import '../widgets/clipboard_import_sheet.dart';
-import '../widgets/day_chip.dart';
+import '../widgets/home_day_selector.dart';
 import '../widgets/period_card.dart';
 import '../widgets/profile_import_dialog.dart';
 import '../widgets/theme_bottom_sheet.dart';
+import '../widgets/timetable_file_import_sheet.dart';
 import '../widgets/update_dialog.dart';
 import 'edit_timetable_screen.dart';
 import 'misc_screen.dart';
@@ -46,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _loading = true;
   Timer? _refreshTimer;
   StreamSubscription<TimingProfile>? _deepLinkSub;
+  StreamSubscription<Map<String, dynamic>>? _timetableDeepLinkSub;
   PeriodStatus? _previousActiveStatus;
   late PageController _pageController;
   bool _permissionsMissing = false;
@@ -141,9 +144,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _loadTimetable();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkSilentUpdate();
-      final pending = DeepLinkService.consumePendingProfile();
-      if (pending != null && mounted) {
-        _handleImportedProfile(pending);
+      final pendingProfile = DeepLinkService.consumePendingProfile();
+      final pendingTimetable = DeepLinkService.consumePendingTimetable();
+      if (pendingTimetable != null && mounted) {
+        _handleIncomingTimetableFile(pendingTimetable);
+      } else if (pendingProfile != null && mounted) {
+        _handleImportedProfile(pendingProfile);
       } else {
         _checkClipboardForProfile();
       }
@@ -151,6 +157,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _deepLinkSub = DeepLinkService.onProfileReceived.listen((profile) {
       if (mounted) {
         _handleImportedProfile(profile);
+      }
+    });
+    _timetableDeepLinkSub = DeepLinkService.onTimetableReceived.listen((timetable) {
+      if (mounted) {
+        _handleIncomingTimetableFile(timetable);
       }
     });
     _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
@@ -165,6 +176,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _deepLinkSub?.cancel();
+    _timetableDeepLinkSub?.cancel();
     _refreshTimer?.cancel();
     _pageController.dispose();
     super.dispose();
@@ -625,6 +637,51 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _handleIncomingTimetableFile(Map<String, dynamic> data) async {
+    final action = await TimetableFileImportSheet.show(
+      context,
+      timetableData: data,
+    );
+
+    if (action == TimetableImportAction.activate && mounted) {
+      final teacher = data['teacher'] as String? ?? 'Teacher';
+      final newEntry = SavedTimetable(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: '$teacher\'s Timetable',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        data: data,
+      );
+      final library = await StorageService.loadSavedTimetables();
+      library.insert(0, newEntry);
+      await StorageService.saveSavedTimetables(library);
+      await StorageService.activateTimetable(newEntry);
+      await _loadTimetable();
+      try {
+        await NotificationService.scheduleAll(data);
+        await WidgetDataService.updateWidget();
+      } catch (_) {}
+      if (mounted) {
+        AppFeedback.showSuccess(context, 'Activated timetable for $teacher!');
+      }
+    } else if (action == TimetableImportAction.saveOnly && mounted) {
+      final teacher = data['teacher'] as String? ?? 'Teacher';
+      final newEntry = SavedTimetable(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: '$teacher\'s Timetable',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        data: data,
+      );
+      final library = await StorageService.loadSavedTimetables();
+      library.insert(0, newEntry);
+      await StorageService.saveSavedTimetables(library);
+      if (mounted) {
+        AppFeedback.showSuccess(context, 'Saved $teacher\'s Timetable to your library.');
+      }
+    }
+  }
+
   Future<void> _checkSilentUpdate() async {
     final release = await UpdateService.checkForUpdate(force: false);
     if (release != null && release.isNewer && mounted) {
@@ -826,45 +883,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       body: SafeArea(
         child: Column(
           children: [
-            _buildDaySelector(colors),
+            HomeDaySelector(
+              allDays: _allDaysInOrder,
+              selectedDayKey: _selectedDayKey,
+              todayKey: _todayKey,
+              onDaySelected: _onDaySelected,
+              colors: colors,
+            ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: _buildDayContent(colors, allFinished),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDaySelector(RelationalColors colors) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: colors.borderSubtle,
-          width: 0.5,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: _allDaysInOrder.map((dayKey) {
-          return DayChip(
-            dayKey: dayKey,
-            label: kDayAbbreviations[dayKey] ?? dayKey.substring(0, 2),
-            isSelected: dayKey == _selectedDayKey,
-            isToday: dayKey == _todayKey,
-            isFriday: dayKey == 'friday',
-            onTap: () => _onDaySelected(dayKey),
-            colors: colors,
-          );
-        }).toList(),
       ),
     );
   }

@@ -7,9 +7,8 @@ import '../constants/period_schedule.dart';
 import '../constants/spacing.dart';
 import '../models/timing_profile.dart';
 import '../services/deep_link_service.dart';
-import '../services/notification_service.dart';
 import '../services/storage_service.dart';
-import '../services/widget_data_service.dart';
+import '../services/timetable_timings_applier.dart';
 import '../theme/relational_colors.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/period_slot_card.dart';
@@ -281,53 +280,17 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
 
     if (confirmed != true) return;
 
-    // Load timetable
-    final timetableData = await StorageService.loadTimetable();
-    if (timetableData == null || timetableData['timetable'] is! Map) {
+    final result = await TimetableTimingsApplier.applyProfile(
+      profile: _currentProfile,
+      allProfiles: _profiles,
+    );
+
+    if (result == null) {
       if (mounted) {
         AppFeedback.showError(context, 'No timetable found to update.');
       }
       return;
     }
-
-    final rawDays = timetableData['timetable'] as Map;
-    final updatedDays = <String, dynamic>{};
-
-    for (final entry in rawDays.entries) {
-      final dayKey = entry.key;
-      final periodList = entry.value;
-      if (periodList is List) {
-        final updatedList = <Map<String, dynamic>>[];
-        for (final item in periodList) {
-          if (item is Map) {
-            final periodMap = Map<String, dynamic>.from(item);
-            final pNum = periodMap['period'] is int
-                ? periodMap['period'] as int
-                : int.tryParse(periodMap['period'].toString());
-
-            if (pNum != null) {
-              final times = _currentProfile.getTimingFor(pNum);
-              periodMap['start'] = times[0];
-              periodMap['end'] = times[1];
-            }
-            updatedList.add(periodMap);
-          }
-        }
-        updatedDays[dayKey] = updatedList;
-      } else {
-        updatedDays[dayKey] = periodList;
-      }
-    }
-
-    timetableData['timetable'] = updatedDays;
-
-    await StorageService.saveTimetable(timetableData);
-    await StorageService.saveActiveProfileId(_currentProfile.id);
-    await StorageService.saveTimingProfiles(_profiles);
-
-    // Run notifications & widget update asynchronously in background for instant UI response
-    unawaited(NotificationService.scheduleAll(updatedDays));
-    unawaited(WidgetDataService.updateWidget());
 
     if (mounted) {
       setState(() {

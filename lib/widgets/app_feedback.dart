@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/primitives.dart';
 import '../theme/relational_colors.dart';
 
 /// Centralized feedback utility ensuring consistent, high-contrast,
@@ -77,17 +78,17 @@ class AppFeedback {
     final colors = context.relColors;
 
     // High contrast styling:
-    // Light mode: Solid dark charcoal background with warm white text
+    // Light mode: Solid dark charcoal background with warm white text derived from Primitives
     // Dark mode: Elevated dark surface with subtle border and crisp text
     final bgColor = isDark
         ? colors.surfaceContainerHighest
-        : const Color(0xFF1E1C18);
+        : Primitives.surfaceDark;
     final fgColor = isDark
         ? colors.textPrimary
-        : const Color(0xFFFDFBF7);
+        : Primitives.textDark;
     final borderColor = isDark
         ? colors.borderSubtle
-        : const Color(0xFF38332B);
+        : Primitives.borderSubtleDark;
 
     messenger.showSnackBar(
       SnackBar(

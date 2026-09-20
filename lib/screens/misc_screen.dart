@@ -4,6 +4,7 @@ import '../constants/spacing.dart';
 import '../services/storage_service.dart';
 import '../theme/relational_colors.dart';
 import 'period_timings_screen.dart';
+import 'saved_timetables_screen.dart';
 
 class MiscScreen extends StatefulWidget {
   const MiscScreen({super.key});
@@ -15,6 +16,8 @@ class MiscScreen extends StatefulWidget {
 class _MiscScreenState extends State<MiscScreen> {
   int _periodCount = 9;
   String _activeProfileName = 'Default';
+  int _savedTimetablesCount = 1;
+  String _activeTimetableName = 'Active';
   bool _timetableModified = false;
   bool _loading = true;
 
@@ -28,6 +31,9 @@ class _MiscScreenState extends State<MiscScreen> {
     final count = await StorageService.loadPeriodCount();
     final activeId = await StorageService.loadActiveProfileId();
     final profiles = await StorageService.loadTimingProfiles();
+    final savedTimetables = await StorageService.loadSavedTimetables();
+    final activeTimetableId = await StorageService.loadActiveTimetableId();
+
     String activeName = 'Default';
     for (final p in profiles) {
       if (p.id == activeId) {
@@ -36,13 +42,33 @@ class _MiscScreenState extends State<MiscScreen> {
       }
     }
 
+    String activeTtName = 'Active';
+    for (final tt in savedTimetables) {
+      if (tt.id == activeTimetableId) {
+        activeTtName = tt.name;
+        break;
+      }
+    }
+
     if (mounted) {
       setState(() {
         _periodCount = count;
         _activeProfileName = activeName;
+        _savedTimetablesCount = savedTimetables.length;
+        _activeTimetableName = activeTtName;
         _loading = false;
       });
     }
+  }
+
+  Future<void> _openSavedTimetables() async {
+    final modified = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const SavedTimetablesScreen()),
+    );
+    if (modified == true) {
+      _timetableModified = true;
+    }
+    _loadSettings();
   }
 
   Future<void> _openPeriodTimings() async {
@@ -239,9 +265,18 @@ class _MiscScreenState extends State<MiscScreen> {
                       color: colors.textSecondary,
                     ),
                   ),
+                  // Option 1: Saved Timetables
+                  _buildOptionCard(
+                    icon: Icons.folder_special_rounded,
+                    title: 'Saved Timetables',
+                    subtitle: '$_savedTimetablesCount saved schedules • switch, export & backup',
+                    trailingBadge: _activeTimetableName,
+                    onTap: _openSavedTimetables,
+                    colors: colors,
+                  ),
                   const SizedBox(height: AppSpacing.sm),
 
-                  // Option 1: Period Timings
+                  // Option 2: Period Timings
                   _buildOptionCard(
                     icon: Icons.schedule_rounded,
                     title: 'Period Timings',
@@ -252,7 +287,7 @@ class _MiscScreenState extends State<MiscScreen> {
                   ),
                   const SizedBox(height: AppSpacing.sm),
 
-                  // Option 2: Period Count
+                  // Option 3: Period Count
                   _buildOptionCard(
                     icon: Icons.view_column_rounded,
                     title: 'Periods per Day',

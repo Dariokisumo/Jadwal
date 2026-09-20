@@ -12,6 +12,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../constants/timetable_prompt.dart';
 import '../constants/weekday_map.dart';
 import '../models/period_model.dart';
+import '../theme/primitives.dart';
 
 /// Maps day keys to Dart [DateTime] weekday constants.
 /// Derived from the inverse in [kWeekdayMap] (DateTime weekday -> day key).
@@ -268,7 +269,7 @@ class NotificationService {
       importance: Importance.high,
       priority: Priority.high,
       groupKey: 'com.jadwal.period_reminders',
-      color: Color(0xFFD4930D),
+      color: Primitives.actionGold,
       subText: 'Jadwal',
       category: AndroidNotificationCategory.reminder,
       onlyAlertOnce: true,

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/saved_timetable.dart';
 import '../models/timing_profile.dart';
 
 /// Thin wrapper around SharedPreferences. Persists timetable data,
@@ -13,6 +14,8 @@ class StorageService {
   static const _periodCountKey = 'period_count';
   static const _timingProfilesKey = 'timing_profiles';
   static const _activeProfileIdKey = 'active_timing_profile_id';
+  static const _savedTimetablesKey = 'saved_timetables_library';
+  static const _activeTimetableIdKey = 'active_saved_timetable_id';
 
   static Future<void> saveTimetable(Map<String, dynamic> data) async {
     final prefs = await SharedPreferences.getInstance();
@@ -226,5 +229,112 @@ class StorageService {
       }
       await prefs.setStringList(_dismissedClipboardKey, dismissed);
     }
+  }
+
+  // ==========================================
+  // SAVED TIMETABLES LIBRARY
+  // ==========================================
+
+  /// Saves the full list of saved timetable profiles to persistent storage.
+  static Future<void> saveSavedTimetables(List<SavedTimetable> list) async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = list.map((item) => item.toJson()).toList();
+    await prefs.setString(_savedTimetablesKey, jsonEncode(encoded));
+  }
+
+  /// Loads the list of saved timetable profiles.
+  /// If the library is empty but a live timetable is loaded, it automatically
+  /// seeds an initial profile so the user's current schedule is safe.
+  static Future<List<SavedTimetable>> loadSavedTimetables() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_savedTimetablesKey);
+
+    if (raw == null || raw.trim().isEmpty) {
+      final current = await loadTimetable();
+      if (current != null) {
+        final teacher = current['teacher'] as String? ?? 'Teacher';
+        final initial = [
+          SavedTimetable(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            name: '$teacher\'s Timetable',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            data: current,
+          ),
+        ];
+        await saveSavedTimetables(initial);
+        await saveActiveTimetableId(initial.first.id);
+        return initial;
+      }
+      return [];
+    }
+
+    try {
+      final decoded = jsonDecode(raw) as List;
+      final list = decoded
+          .map((item) => SavedTimetable.fromJson(item as Map<String, dynamic>))
+          .toList();
+
+      if (list.isEmpty) {
+        final current = await loadTimetable();
+        if (current != null) {
+          final teacher = current['teacher'] as String? ?? 'Teacher';
+          final initial = [
+            SavedTimetable(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              name: '$teacher\'s Timetable',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+              data: current,
+            ),
+          ];
+          await saveSavedTimetables(initial);
+          await saveActiveTimetableId(initial.first.id);
+          return initial;
+        }
+      }
+      return list;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Persists the ID of the currently active saved timetable.
+  static Future<void> saveActiveTimetableId(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_activeTimetableIdKey, id);
+  }
+
+  /// Returns the ID of the currently active saved timetable.
+  static Future<String?> loadActiveTimetableId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_activeTimetableIdKey);
+  }
+
+  /// Activates the given saved timetable: sets it as live timetable in storage,
+  /// updates the active ID, and marks it loaded.
+  static Future<void> activateTimetable(SavedTimetable timetable) async {
+    await saveTimetable(timetable.data);
+    await saveActiveTimetableId(timetable.id);
+  }
+
+  /// Saves the current live timetable snapshot as a new entry in the library.
+  static Future<SavedTimetable?> saveCurrentLiveTimetableAs(String name) async {
+    final current = await loadTimetable();
+    if (current == null) return null;
+
+    final library = await loadSavedTimetables();
+    final newEntry = SavedTimetable(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name.trim().isNotEmpty ? name.trim() : 'Saved Timetable',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      data: current,
+    );
+
+    library.insert(0, newEntry);
+    await saveSavedTimetables(library);
+    await saveActiveTimetableId(newEntry.id);
+    return newEntry;
   }
 }

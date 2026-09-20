@@ -71,6 +71,38 @@ class MainActivity: FlutterActivity() {
             }
         }
 
+        // 4. Check file and content URIs (e.g. tapped a .jadwal or .json file in Files/Downloads/WhatsApp)
+        if (url == null && data != null && (data.scheme == "content" || data.scheme == "file")) {
+            try {
+                contentResolver.openInputStream(data)?.use { inputStream ->
+                    val fileContent = inputStream.bufferedReader().use { it.readText() }
+                    if (fileContent.isNotBlank()) {
+                        url = fileContent.trim()
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
+        // 5. Check ACTION_SEND or ACTION_VIEW with EXTRA_STREAM (file shared directly into Jadwal)
+        if (url == null && (intent.action == Intent.ACTION_SEND || intent.action == Intent.ACTION_VIEW)) {
+            val streamUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_STREAM)
+            }
+            if (streamUri != null) {
+                try {
+                    contentResolver.openInputStream(streamUri)?.use { inputStream ->
+                        val fileContent = inputStream.bufferedReader().use { it.readText() }
+                        if (fileContent.isNotBlank()) {
+                            url = fileContent.trim()
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
         if (url != null) {
             pendingDeepLink = url
             methodChannel?.invokeMethod("onDeepLink", url)
@@ -165,10 +197,79 @@ class MainActivity: FlutterActivity() {
                         result.error("INVALID_ARGUMENT", "url cannot be null", null)
                     }
                 }
+                "shareFile" -> {
+                    val filePath = call.argument<String>("filePath")
+                    val title = call.argument<String>("title") ?: "Share Timetable"
+                    val mimeType = call.argument<String>("mimeType") ?: "application/json"
+                    if (filePath != null) {
+                        result.success(shareFile(filePath, title, mimeType))
+                    } else {
+                        result.error("INVALID_ARGUMENT", "filePath cannot be null", null)
+                    }
+                }
+                "saveFileToDownloads" -> {
+                    val fileName = call.argument<String>("fileName") ?: "timetable.jadwal"
+                    val content = call.argument<String>("content")
+                    if (content != null) {
+                        val path = saveFileToDownloads(fileName, content)
+                        result.success(path)
+                    } else {
+                        result.error("INVALID_ARGUMENT", "content cannot be null", null)
+                    }
+                }
                 else -> {
                     result.notImplemented()
                 }
             }
+        }
+    }
+
+    private fun shareFile(filePath: String, title: String, mimeType: String): Boolean {
+        return try {
+            val file = File(filePath)
+            if (!file.exists()) return false
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            val sendIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_STREAM, uri)
+                type = mimeType
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val shareIntent = Intent.createChooser(sendIntent, title)
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            startActivity(shareIntent)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun saveFileToDownloads(fileName: String, content: String): String? {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                }
+                val uri = contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        outputStream.write(content.toByteArray(Charsets.UTF_8))
+                    }
+                    "${Environment.DIRECTORY_DOWNLOADS}/$fileName"
+                } else null
+            } else {
+                @Suppress("DEPRECATION")
+                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                val targetFile = File(downloadsDir, fileName)
+                targetFile.writeText(content, Charsets.UTF_8)
+                android.media.MediaScannerConnection.scanFile(this, arrayOf(targetFile.absolutePath), null, null)
+                targetFile.absolutePath
+            }
+        } catch (_: Exception) {
+            null
         }
     }
 

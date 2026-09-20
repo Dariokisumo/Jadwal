@@ -85,13 +85,17 @@ class DayChip extends StatelessWidget {
                         size: 16,
                         color: textColor,
                       )
-                    : Text(
-                        label,
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: textColor,
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 13,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: textColor,
+                          ),
                         ),
                       ),
               ),
