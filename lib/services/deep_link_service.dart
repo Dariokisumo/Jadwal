@@ -127,4 +127,34 @@ class DeepLinkService {
       return null;
     }
   }
+
+  /// Checks whether an Android app with [packageName] is installed on this device.
+  static Future<bool> isAppInstalled(String packageName) async {
+    try {
+      if (!Platform.isAndroid) return false;
+      final installed = await _channel.invokeMethod<bool>('isAppInstalled', {
+        'package': packageName,
+      });
+      return installed ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Launches an app via [packageName] if installed, or falls back to [fallbackUrl].
+  static Future<bool> launchAppOrUrl({
+    String? packageName,
+    required String fallbackUrl,
+  }) async {
+    try {
+      if (!Platform.isAndroid) return false;
+      final launched = await _channel.invokeMethod<bool>('launchAppOrUrl', {
+        if (packageName != null) 'package': packageName,
+        'url': fallbackUrl,
+      });
+      return launched ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
 }

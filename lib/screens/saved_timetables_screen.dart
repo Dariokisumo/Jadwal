@@ -134,16 +134,24 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
               if (name.isEmpty) return;
               Navigator.pop(ctx);
 
-              final newEntry = await StorageService.saveCurrentLiveTimetableAs(name);
-              if (newEntry != null) {
-                await _loadData();
-                if (mounted) {
-                  AppFeedback.showSuccess(context, 'Saved "$name" to library');
-                }
+              final newEntry = SavedTimetable(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                name: name,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+                data: current,
+              );
+
+              _timetables.insert(0, newEntry);
+              await StorageService.saveSavedTimetables(_timetables);
+              setState(() => _timetableModified = true);
+
+              if (mounted) {
+                AppFeedback.showSuccess(context, 'Saved "$name" to library');
               }
             },
             style: FilledButton.styleFrom(backgroundColor: colors.action),
-            child: const Text('Save'),
+            child: const Text('Save to Library'),
           ),
         ],
       ),
@@ -154,13 +162,13 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
     final colors = context.relColors;
     final controller = TextEditingController(text: timetable.name);
 
-    showDialog(
+    final newName = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          'Rename Schedule',
+          'Rename Timetable',
           style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
         ),
         content: TextField(
@@ -168,7 +176,7 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
           autofocus: true,
           style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: colors.textPrimary),
           decoration: InputDecoration(
-            labelText: 'Name',
+            labelText: 'Schedule Name',
             filled: true,
             fillColor: colors.surfaceContainer,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -180,69 +188,64 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
             child: Text('Cancel', style: TextStyle(color: colors.textSecondary)),
           ),
           FilledButton(
-            onPressed: () async {
-              final newName = controller.text.trim();
-              if (newName.isEmpty) return;
-              Navigator.pop(ctx);
-
-              timetable.name = newName;
-              timetable.updatedAt = DateTime.now();
-              await StorageService.saveSavedTimetables(_timetables);
-              setState(() {});
-              if (mounted) {
-                AppFeedback.showSuccess(context, 'Renamed to "$newName"');
-              }
-            },
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             style: FilledButton.styleFrom(backgroundColor: colors.action),
             child: const Text('Save'),
           ),
         ],
       ),
     );
+
+    if (newName != null && newName.isNotEmpty && newName != timetable.name) {
+      final updated = timetable.copyWith(name: newName, updatedAt: DateTime.now());
+      final index = _timetables.indexWhere((t) => t.id == timetable.id);
+      if (index != -1) {
+        _timetables[index] = updated;
+        await StorageService.saveSavedTimetables(_timetables);
+        setState(() {});
+        if (mounted) {
+          AppFeedback.showSuccess(context, 'Renamed to "$newName"');
+        }
+      }
+    }
   }
 
   Future<void> _duplicate(SavedTimetable timetable) async {
-    HapticFeedback.lightImpact();
-    final cloned = timetable.copyWith(
+    final dup = SavedTimetable(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: '${timetable.name} (Copy)',
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
-      data: Map<String, dynamic>.from(timetable.data),
+      data: timetable.data,
     );
 
-    _timetables.insert(0, cloned);
+    _timetables.insert(0, dup);
     await StorageService.saveSavedTimetables(_timetables);
     setState(() {});
-
     if (mounted) {
       AppFeedback.showSuccess(context, 'Duplicated "${timetable.name}"');
     }
   }
 
   Future<void> _delete(SavedTimetable timetable) async {
-    final colors = context.relColors;
-
     if (timetable.id == _activeId && _timetables.length > 1) {
-      AppFeedback.showInfo(
-        context,
-        'Cannot delete the currently active timetable. Switch to another schedule first.',
-      );
+      AppFeedback.showError(context, 'Cannot delete the active timetable. Activate another first.');
       return;
     }
 
+    final colors = context.relColors;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
-          'Delete Schedule?',
+          'Delete Timetable?',
           style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
         ),
         content: Text(
           'Are you sure you want to delete "${timetable.name}"? This action cannot be undone.',
-          style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: colors.textSecondary),
+          style: TextStyle(fontFamily: 'Geist', fontSize: 13.5, color: colors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -267,6 +270,19 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
         AppFeedback.showSuccess(context, 'Deleted "${timetable.name}"');
       }
     }
+  }
+
+  Future<void> _directShareOrExport(SavedTimetable timetable) async {
+    final sanitizedName = timetable.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+    final fileName = '${sanitizedName}_Timetable.jadwal';
+    final fileContent = timetable.toFileContent();
+
+    HapticFeedback.lightImpact();
+    await DeepLinkService.shareTimetableFile(
+      fileName: fileName,
+      content: fileContent,
+      title: 'Share "${timetable.name}"',
+    );
   }
 
   Future<void> _showExportOptions(SavedTimetable timetable) async {
@@ -310,51 +326,16 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Export "$fileName" to save locally or share with another device.',
+                'Export "$fileName" to device storage or share via other apps.',
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 13,
                   color: colors.textSecondary,
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.base),
 
-              // Option 1: Save to Downloads
-              ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: colors.actionSubtle,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.download_rounded, color: colors.action, size: 20),
-                ),
-                title: Text(
-                  'Save to Downloads Folder',
-                  style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600, color: colors.textPrimary),
-                ),
-                subtitle: Text(
-                  'Download directly to device storage',
-                  style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: colors.textSecondary),
-                ),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final path = await DeepLinkService.saveTimetableFileToDownloads(
-                    fileName: fileName,
-                    content: fileContent,
-                  );
-                  if (path != null && mounted) {
-                    AppFeedback.showSuccess(context, 'Saved to Downloads folder: $fileName');
-                  } else if (mounted) {
-                    AppFeedback.showError(context, 'Could not save file to Downloads.');
-                  }
-                },
-              ),
-              const SizedBox(height: AppSpacing.sm),
-
-              // Option 2: Share via Android Share Sheet
+              // Option 1: Direct Share Sheet
               ListTile(
                 leading: Container(
                   width: 40,
@@ -373,7 +354,7 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                   'Send via WhatsApp, Drive, Bluetooth, or Email',
                   style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: colors.textSecondary),
                 ),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 onTap: () async {
                   Navigator.pop(ctx);
                   await DeepLinkService.shareTimetableFile(
@@ -381,6 +362,41 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                     content: fileContent,
                     title: 'Share "${timetable.name}"',
                   );
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+
+              // Option 2: Save to Downloads
+              ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: colors.actionSubtle,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.download_rounded, color: colors.action, size: 20),
+                ),
+                title: Text(
+                  'Save to Downloads Folder',
+                  style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600, color: colors.textPrimary),
+                ),
+                subtitle: Text(
+                  'Download directly into public storage',
+                  style: TextStyle(fontFamily: 'Geist', fontSize: 12, color: colors.textSecondary),
+                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  final path = await DeepLinkService.saveTimetableFileToDownloads(
+                    fileName: fileName,
+                    content: fileContent,
+                  );
+                  if (path != null && mounted) {
+                    AppFeedback.showSuccess(context, 'Saved to Downloads folder: $fileName');
+                  } else if (mounted) {
+                    AppFeedback.showError(context, 'Could not save file to Downloads.');
+                  }
                 },
               ),
             ],
@@ -393,7 +409,8 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
   Future<void> _pickAndImportFile() async {
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
+        type: FileType.custom,
+        allowedExtensions: ['jadwal', 'json'],
         withData: true,
       );
 
@@ -410,9 +427,27 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
 
       if (normalized == null) {
         if (mounted) {
-          AppFeedback.showError(
-            context,
-            'Invalid timetable file. Expected valid timetable JSON structure.',
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: context.relColors.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text(
+                'Invalid Timetable File',
+                style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
+              ),
+              content: Text(
+                'The selected file does not contain a valid timetable structure.\n\nPlease choose an exported .jadwal or .json file.',
+                style: TextStyle(fontFamily: 'Geist', fontSize: 13.5, color: context.relColors.textSecondary),
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: FilledButton.styleFrom(backgroundColor: context.relColors.action),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
           );
         }
         return;
@@ -444,7 +479,10 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.relColors;
-    final active = _activeTimetable;
+
+    // Separate active and inactive timetables for a single, unified list
+    final activeItem = _activeTimetable;
+    final inactiveItems = _timetables.where((t) => t.id != _activeId).toList();
 
     return PopScope(
       canPop: false,
@@ -476,27 +514,21 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
             : ListView(
                 padding: const EdgeInsets.all(AppSpacing.base),
                 children: [
-                  // Active Timetable Hero Card
-                  if (active != null) ...[
-                    _buildActiveHeroCard(active, colors),
-                    const SizedBox(height: AppSpacing.base),
-                  ],
-
                   // Action Buttons Toolbar
                   Row(
                     children: [
                       Expanded(
                         child: FilledButton.tonalIcon(
-                          onPressed: _showSaveCurrentDialog,
-                          icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                          onPressed: _pickAndImportFile,
+                          icon: const Icon(Icons.file_open_rounded, size: 18),
                           label: const Text(
-                            'Save Current As…',
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600),
+                            'Import File',
+                            style: TextStyle(fontFamily: 'Geist', fontSize: 13.5, fontWeight: FontWeight.w600),
                           ),
                           style: FilledButton.styleFrom(
                             backgroundColor: colors.actionSubtle,
                             foregroundColor: colors.action,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
@@ -504,68 +536,95 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: _pickAndImportFile,
-                          icon: const Icon(Icons.file_open_outlined, size: 16),
+                          onPressed: _showSaveCurrentDialog,
+                          icon: const Icon(Icons.bookmark_add_outlined, size: 18),
                           label: const Text(
-                            'Import File',
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 13, fontWeight: FontWeight.w600),
+                            'Save Current',
+                            style: TextStyle(fontFamily: 'Geist', fontSize: 13.5, fontWeight: FontWeight.w600),
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: colors.textPrimary,
                             side: BorderSide(color: colors.borderSubtle),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.xl),
+                  const SizedBox(height: AppSpacing.lg),
 
                   // Library Section Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'SAVED LIBRARY (${_timetables.length})',
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'SCHEDULE LIBRARY (${_timetables.length})',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: colors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
 
-                  // Library Card List
+                  // Single Unified List (No duplicate hero card!)
                   if (_timetables.isEmpty)
                     Container(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(32),
                       alignment: Alignment.center,
-                      child: Text(
-                        'No saved timetables yet.',
-                        style: TextStyle(fontFamily: 'Geist', color: colors.textSecondary),
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainer,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.calendar_month_outlined, size: 36, color: colors.textSecondary),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'No saved timetables yet.',
+                            style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: colors.textSecondary),
+                          ),
+                        ],
                       ),
                     )
-                  else
-                    ..._timetables.map((item) => _buildLibraryItemCard(item, colors)),
+                  else ...[
+                    // Pinned Active Item at the top
+                    if (activeItem != null)
+                      _buildScheduleCard(
+                        timetable: activeItem,
+                        isActive: true,
+                        colors: colors,
+                      ),
+                    // Inactive Items
+                    for (final item in inactiveItems)
+                      _buildScheduleCard(
+                        timetable: item,
+                        isActive: false,
+                        colors: colors,
+                      ),
+                  ],
                 ],
               ),
       ),
     );
   }
 
-  Widget _buildActiveHeroCard(SavedTimetable timetable, RelationalColors colors) {
+  Widget _buildScheduleCard({
+    required SavedTimetable timetable,
+    required bool isActive,
+    required RelationalColors colors,
+  }) {
     return Container(
-      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: const EdgeInsets.all(AppSpacing.base),
       decoration: BoxDecoration(
         color: colors.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.action.withValues(alpha: 0.4), width: 1.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isActive ? colors.action.withValues(alpha: 0.4) : colors.borderSubtle,
+          width: isActive ? 1.5 : 1.0,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -573,13 +632,17 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: colors.actionSubtle,
+                  color: isActive ? colors.actionSubtle : colors.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(Icons.check_circle_rounded, color: colors.action, size: 22),
+                child: Icon(
+                  isActive ? Icons.check_circle_rounded : Icons.calendar_today_rounded,
+                  size: 18,
+                  color: isActive ? colors.action : colors.textSecondary,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -593,7 +656,7 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                             timetable.name,
                             style: TextStyle(
                               fontFamily: 'Geist',
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w700,
                               color: colors.textPrimary,
                             ),
@@ -601,24 +664,26 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: colors.action,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'ACTIVE',
-                            style: TextStyle(
-                              fontFamily: 'Geist',
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                              color: colors.onAction,
+                        if (isActive) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: colors.action,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'ACTIVE',
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                                color: colors.onAction,
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 2),
@@ -635,20 +700,93 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                   ],
                 ),
               ),
+              // Direct 1-tap Share/Export Action Button
               IconButton(
-                icon: const Icon(Icons.download_rounded, size: 20),
+                icon: const Icon(Icons.share_outlined, size: 20),
                 color: colors.action,
-                tooltip: 'Export .jadwal file',
-                onPressed: () => _showExportOptions(timetable),
+                tooltip: 'Share / Export',
+                padding: const EdgeInsets.all(12),
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () => _directShareOrExport(timetable),
+              ),
+              // Context Options Menu
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert_rounded, size: 20, color: colors.textSecondary),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                color: colors.surface,
+                padding: const EdgeInsets.all(12),
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onSelected: (action) {
+                  if (action == 'activate') _activate(timetable);
+                  if (action == 'export_options') _showExportOptions(timetable);
+                  if (action == 'rename') _rename(timetable);
+                  if (action == 'duplicate') _duplicate(timetable);
+                  if (action == 'delete') _delete(timetable);
+                },
+                itemBuilder: (ctx) => [
+                  if (!isActive)
+                    const PopupMenuItem(
+                      value: 'activate',
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle_outline_rounded, size: 18),
+                          SizedBox(width: 10),
+                          Text('Activate Schedule'),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuItem(
+                    value: 'export_options',
+                    child: Row(
+                      children: [
+                        Icon(Icons.download_rounded, size: 18),
+                        SizedBox(width: 10),
+                        Text('Export Options (Save/Share)'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'rename',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 18),
+                        SizedBox(width: 10),
+                        Text('Rename'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'duplicate',
+                    child: Row(
+                      children: [
+                        Icon(Icons.copy_rounded, size: 18),
+                        SizedBox(width: 10),
+                        Text('Duplicate'),
+                      ],
+                    ),
+                  ),
+                  if (!isActive)
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline_rounded, size: 18, color: colors.danger),
+                          SizedBox(width: 10),
+                          Text('Delete', style: TextStyle(color: colors.danger)),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
+          // Timetable Metadata Bar
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: colors.surface,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: colors.borderSubtle),
             ),
             child: Row(
@@ -680,168 +818,23 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLibraryItemCard(SavedTimetable item, RelationalColors colors) {
-    final isActive = item.id == _activeId;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isActive ? colors.action.withValues(alpha: 0.3) : colors.borderSubtle,
-          width: isActive ? 1.5 : 0.5,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: isActive ? colors.actionSubtle : colors.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(
-              isActive ? Icons.event_available_rounded : Icons.calendar_today_rounded,
-              size: 18,
-              color: isActive ? colors.action : colors.textSecondary,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        item.name,
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w600,
-                          color: colors.textPrimary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (isActive) ...[
-                      const SizedBox(width: 6),
-                      Text(
-                        '• Active',
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: colors.action,
-                        ),
-                      ),
-                    ],
-                  ],
+          if (!isActive) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.tonalIcon(
+                onPressed: () => _activate(timetable),
+                icon: const Icon(Icons.check_rounded, size: 16),
+                label: const Text('Activate This Schedule'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: colors.actionSubtle,
+                  foregroundColor: colors.action,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${item.teacher} • ${item.totalClasses} classes • ${item.activeDays.length} days',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 12,
-                    color: colors.textSecondary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          if (!isActive)
-            TextButton(
-              onPressed: () => _activate(item),
-              style: TextButton.styleFrom(
-                foregroundColor: colors.action,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text(
-                'Activate',
-                style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600, fontSize: 13),
               ),
             ),
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert_rounded, size: 20, color: colors.textSecondary),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            color: colors.surfaceContainer,
-            onSelected: (action) {
-              if (action == 'activate') _activate(item);
-              if (action == 'export') _showExportOptions(item);
-              if (action == 'rename') _rename(item);
-              if (action == 'duplicate') _duplicate(item);
-              if (action == 'delete') _delete(item);
-            },
-            itemBuilder: (ctx) => [
-              if (!isActive)
-                const PopupMenuItem(
-                  value: 'activate',
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle_outline_rounded, size: 18),
-                      SizedBox(width: 10),
-                      Text('Activate Schedule'),
-                    ],
-                  ),
-                ),
-              const PopupMenuItem(
-                value: 'export',
-                child: Row(
-                  children: [
-                    Icon(Icons.download_rounded, size: 18),
-                    SizedBox(width: 10),
-                    Text('Export / Download File'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'rename',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Text('Rename'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'duplicate',
-                child: Row(
-                  children: [
-                    Icon(Icons.copy_rounded, size: 18),
-                    SizedBox(width: 10),
-                    Text('Duplicate'),
-                  ],
-                ),
-              ),
-              if (!isActive)
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline_rounded, size: 18, color: colors.danger),
-                      const SizedBox(width: 10),
-                      Text('Delete', style: TextStyle(color: colors.danger)),
-                    ],
-                  ),
-                ),
-            ],
-          ),
+          ],
         ],
       ),
     );

@@ -217,6 +217,46 @@ class MainActivity: FlutterActivity() {
                         result.error("INVALID_ARGUMENT", "content cannot be null", null)
                     }
                 }
+                "isAppInstalled" -> {
+                    val pkg = call.argument<String>("package")
+                    if (pkg != null) {
+                        val installed = try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                packageManager.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0))
+                            } else {
+                                @Suppress("DEPRECATION")
+                                packageManager.getPackageInfo(pkg, 0)
+                            }
+                            true
+                        } catch (_: Exception) {
+                            packageManager.getLaunchIntentForPackage(pkg) != null
+                        }
+                        result.success(installed)
+                    } else {
+                        result.success(false)
+                    }
+                }
+                "launchAppOrUrl" -> {
+                    val pkg = call.argument<String>("package")
+                    val url = call.argument<String>("url")
+                    var launched = false
+                    if (pkg != null) {
+                        val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
+                        if (launchIntent != null) {
+                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(launchIntent)
+                            launched = true
+                        }
+                    }
+                    if (!launched && url != null) {
+                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(browserIntent)
+                        launched = true
+                    }
+                    result.success(launched)
+                }
                 else -> {
                     result.notImplemented()
                 }

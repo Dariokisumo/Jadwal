@@ -1,19 +1,128 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:android_intent_plus/android_intent.dart';
 
 import '../constants/spacing.dart';
 import '../constants/timetable_prompt.dart';
+import '../services/deep_link_service.dart';
 import '../services/json_validator.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../theme/relational_colors.dart';
 import '../widgets/app_feedback.dart';
-import '../widgets/wavy_progress_bar.dart';
+import '../widgets/brand_icons.dart';
 import 'home_screen.dart';
+
+/// Pre-populated demo schedule for instant preview and testing.
+const Map<String, dynamic> kSampleTimetable = {
+  'teacher': 'Demo Teacher',
+  'timetable': {
+    'saturday': [
+      {
+        'period': 1,
+        'subject': 'ENG',
+        'classroom': 'Room 101',
+        'start': '8:30 AM',
+        'end': '9:15 AM'
+      },
+      {
+        'period': 2,
+        'subject': 'MATH',
+        'classroom': 'Room 104',
+        'start': '9:20 AM',
+        'end': '10:05 AM'
+      },
+      {
+        'period': 3,
+        'subject': 'SCI',
+        'classroom': 'Lab 2',
+        'start': '10:20 AM',
+        'end': '11:05 AM'
+      }
+    ],
+    'sunday': [
+      {
+        'period': 1,
+        'subject': 'HIS',
+        'classroom': 'Room 102',
+        'start': '8:30 AM',
+        'end': '9:15 AM'
+      },
+      {
+        'period': 2,
+        'subject': 'ENG',
+        'classroom': 'Room 101',
+        'start': '9:20 AM',
+        'end': '10:05 AM'
+      }
+    ],
+    'monday': [
+      {
+        'period': 1,
+        'subject': 'MATH',
+        'classroom': 'Room 104',
+        'start': '8:30 AM',
+        'end': '9:15 AM'
+      },
+      {
+        'period': 2,
+        'subject': 'GEO',
+        'classroom': 'Room 103',
+        'start': '9:20 AM',
+        'end': '10:05 AM'
+      },
+      {
+        'period': 4,
+        'subject': 'ART',
+        'classroom': 'Studio 1',
+        'start': '11:15 AM',
+        'end': '12:00 PM'
+      }
+    ],
+    'tuesday': [
+      {
+        'period': 1,
+        'subject': 'SCI',
+        'classroom': 'Lab 2',
+        'start': '8:30 AM',
+        'end': '9:15 AM'
+      },
+      {
+        'period': 3,
+        'subject': 'ENG',
+        'classroom': 'Room 101',
+        'start': '10:20 AM',
+        'end': '11:05 AM'
+      }
+    ],
+    'wednesday': [
+      {
+        'period': 2,
+        'subject': 'MATH',
+        'classroom': 'Room 104',
+        'start': '9:20 AM',
+        'end': '10:05 AM'
+      },
+      {
+        'period': 3,
+        'subject': 'PE',
+        'classroom': 'Gym',
+        'start': '10:20 AM',
+        'end': '11:05 AM'
+      }
+    ],
+    'thursday': [
+      {
+        'period': 1,
+        'subject': 'HIS',
+        'classroom': 'Room 102',
+        'start': '8:30 AM',
+        'end': '9:15 AM'
+      }
+    ]
+  }
+};
 
 class SetupScreen extends StatefulWidget {
   const SetupScreen({super.key});
@@ -22,8 +131,7 @@ class SetupScreen extends StatefulWidget {
   State<SetupScreen> createState() => _SetupScreenState();
 }
 
-class _SetupScreenState extends State<SetupScreen>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
   final _jsonController = TextEditingController();
   final _scrollController = ScrollController();
 
@@ -41,39 +149,15 @@ class _SetupScreenState extends State<SetupScreen>
   bool _notificationsEnabled = false;
   bool _alarmsEnabled = false;
 
-  static const _reducedMotionThreshold = 0;
-
-  late final AnimationController _copyBounceController;
-  late final AnimationController _activeDotPulseController;
-
-  Duration _duration(int ms) {
-    final reduced = MediaQuery.of(context).disableAnimations;
-    return Duration(milliseconds: reduced ? _reducedMotionThreshold : ms);
-  }
-
-  late final Animation<double> _copyBounceScale = TweenSequence<double>([
-    TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.95), weight: 25),
-    TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.07), weight: 35),
-    TweenSequenceItem(tween: Tween(begin: 1.07, end: 1.0), weight: 40),
-  ]).animate(CurvedAnimation(parent: _copyBounceController, curve: Curves.easeOut));
-
-  late final Animation<double> _activeDotPulseScale = Tween<double>(begin: 1.0, end: 1.2).animate(
-    CurvedAnimation(parent: _activeDotPulseController, curve: Curves.easeInOut),
-  );
+  // Native assistant app detection
+  bool _geminiInstalled = false;
+  bool _chatGptInstalled = false;
+  bool _claudeInstalled = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _copyBounceController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    );
-    _activeDotPulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _activeDotPulseController.repeat(reverse: true);
 
     _jsonController.addListener(() {
       final hasContent = _jsonController.text.trim().isNotEmpty;
@@ -85,6 +169,8 @@ class _SetupScreenState extends State<SetupScreen>
       }
     });
 
+    _detectInstalledApps();
+
     // Check clipboard on initial cold open in case user already copied it before launching
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkClipboardForTimetable(userInitiated: false);
@@ -94,8 +180,6 @@ class _SetupScreenState extends State<SetupScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _copyBounceController.dispose();
-    _activeDotPulseController.dispose();
     _jsonController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -104,7 +188,21 @@ class _SetupScreenState extends State<SetupScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !_isProcessing && !_showStepThree) {
+      _detectInstalledApps();
       _checkClipboardForTimetable(userInitiated: false);
+    }
+  }
+
+  Future<void> _detectInstalledApps() async {
+    final gemini = await DeepLinkService.isAppInstalled('com.google.android.apps.bard');
+    final chatgpt = await DeepLinkService.isAppInstalled('com.openai.chatgpt');
+    final claude = await DeepLinkService.isAppInstalled('com.anthropic.claude');
+    if (mounted) {
+      setState(() {
+        _geminiInstalled = gemini;
+        _chatGptInstalled = chatgpt;
+        _claudeInstalled = claude;
+      });
     }
   }
 
@@ -168,9 +266,11 @@ class _SetupScreenState extends State<SetupScreen>
     }
   }
 
-  Future<void> _launchAiAssistant({
+  Future<void> _launchAssistant({
     required String name,
-    required String url,
+    required String packageName,
+    required String fallbackUrl,
+    required bool isInstalled,
   }) async {
     await Clipboard.setData(const ClipboardData(text: kTimetablePrompt));
     HapticFeedback.lightImpact();
@@ -182,21 +282,17 @@ class _SetupScreenState extends State<SetupScreen>
         _stepOneComplete = true;
         _showStepTwo = true;
       });
-      _copyBounceController.forward(from: 0.0);
       AppFeedback.showSuccess(
         context,
-        'Prompt copied! Opening $name…',
+        'Prompt copied! Opening $name (${isInstalled ? 'App' : 'Web'})…',
       );
     }
 
     try {
-      if (Platform.isAndroid) {
-        final intent = AndroidIntent(
-          action: 'action_view',
-          data: url,
-        );
-        await intent.launch();
-      }
+      await DeepLinkService.launchAppOrUrl(
+        packageName: packageName,
+        fallbackUrl: fallbackUrl,
+      );
     } catch (_) {}
 
     _scrollToStepTwo();
@@ -213,7 +309,6 @@ class _SetupScreenState extends State<SetupScreen>
       _stepOneComplete = true;
       _showStepTwo = true;
     });
-    _copyBounceController.forward(from: 0.0);
     if (mounted) {
       AppFeedback.showSuccess(context, 'Prompt copied to clipboard');
     }
@@ -222,12 +317,29 @@ class _SetupScreenState extends State<SetupScreen>
     if (mounted) setState(() => _promptCopied = false);
   }
 
+  void _loadSampleTimetable() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _parsedTimetable = kSampleTimetable;
+      _jsonController.text = const JsonEncoder.withIndent('  ').convert(kSampleTimetable);
+      _hasPastedContent = true;
+      _stepOneComplete = true;
+      _showStepTwo = true;
+      _errorMessage = null;
+    });
+    AppFeedback.showSuccess(
+      context,
+      'Loaded sample schedule for Demo Teacher!',
+    );
+    _scrollToStepTwo();
+  }
+
   void _scrollToStepTwo() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 450),
+          duration: const Duration(milliseconds: 400),
           curve: Curves.easeOutCubic,
         );
       }
@@ -243,7 +355,7 @@ class _SetupScreenState extends State<SetupScreen>
     final raw = _jsonController.text.trim();
     if (raw.isEmpty) {
       setState(() {
-        _errorMessage = 'Please copy a timetable from an AI or paste JSON to continue.';
+        _errorMessage = 'Please copy a timetable or paste JSON to continue.';
       });
       return;
     }
@@ -261,8 +373,7 @@ class _SetupScreenState extends State<SetupScreen>
       } catch (_) {
         setState(() {
           _errorMessage =
-              'This is not valid JSON. Make sure the AI returned '
-              'a valid timetable JSON object.';
+              'This is not valid JSON. Make sure the timetable is in the correct format.';
           _isProcessing = false;
         });
         return;
@@ -334,11 +445,11 @@ class _SetupScreenState extends State<SetupScreen>
     final reduced = MediaQuery.of(context).disableAnimations;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        transitionDuration: Duration(milliseconds: reduced ? 0 : 400),
+        transitionDuration: Duration(milliseconds: reduced ? 0 : 350),
         pageBuilder: (_, __, ___) => const HomeScreen(),
         transitionsBuilder: (_, animation, __, child) {
           final fade = CurvedAnimation(parent: animation, curve: Curves.easeOut);
-          final scale = Tween(begin: 0.97, end: 1.0).animate(fade);
+          final scale = Tween(begin: 0.98, end: 1.0).animate(fade);
           return FadeTransition(
             opacity: fade,
             child: ScaleTransition(scale: scale, child: child),
@@ -356,7 +467,8 @@ class _SetupScreenState extends State<SetupScreen>
 
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
+        type: FileType.custom,
+        allowedExtensions: ['json', 'jadwal'],
         withData: true,
       );
 
@@ -366,18 +478,10 @@ class _SetupScreenState extends State<SetupScreen>
       }
 
       final fileName = result.files.single.name;
-      if (!fileName.toLowerCase().endsWith('.json')) {
-        setState(() {
-          _errorMessage = 'Please select a .json file.';
-          _isProcessing = false;
-        });
-        return;
-      }
-
       final fileBytes = result.files.single.bytes;
       if (fileBytes == null) {
         setState(() {
-          _errorMessage = 'Could not read the selected file. Please try again.';
+          _errorMessage = 'Could not read "$fileName". Please try again.';
           _isProcessing = false;
         });
         return;
@@ -406,7 +510,7 @@ class _SetupScreenState extends State<SetupScreen>
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Something went wrong while importing: $e';
+        _errorMessage = 'Error reading file: $e';
         _isProcessing = false;
       });
     }
@@ -417,61 +521,74 @@ class _SetupScreenState extends State<SetupScreen>
     final colors = context.relColors;
 
     return Scaffold(
+      backgroundColor: colors.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           controller: _scrollController,
-          padding: const EdgeInsets.all(AppSpacing.xl),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.base,
+            vertical: AppSpacing.lg,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: AppSpacing.sm),
-              // Brand Mark
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: colors.actionSubtle,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: colors.borderSubtle),
-                ),
-                child: Icon(
-                  Icons.schedule_rounded,
-                  color: colors.action,
-                  size: 26,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Jadwal',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: colors.textPrimary,
-                ),
-              ),
               const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Set up your weekly timetable in seconds — works 100% offline.',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 14.5,
-                  color: colors.textSecondary,
-                  height: 1.35,
-                ),
+              // App Brand Header
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: colors.actionSubtle,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.schedule_rounded,
+                      color: colors.action,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Jadwal',
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          'Offline timetable tracker',
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 13,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.xl),
+              // Calm Progress Indicator
               _buildProgressIndicator(colors),
-              const SizedBox(height: AppSpacing.xl),
+              const SizedBox(height: AppSpacing.lg),
               if (!_showStepThree) ...[
                 _buildStepOne(colors),
                 if (_showStepTwo) ...[
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.md),
                   _buildStepTwo(colors),
                 ],
               ] else ...[
                 _buildCompletedSummary(colors),
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: AppSpacing.md),
                 _buildStepThree(colors),
               ],
             ],
@@ -493,16 +610,16 @@ class _SetupScreenState extends State<SetupScreen>
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: colors.actionSubtle,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              Icons.check_rounded,
+              Icons.check_circle_rounded,
               color: colors.action,
-              size: 20,
+              size: 22,
             ),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -511,20 +628,20 @@ class _SetupScreenState extends State<SetupScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Timetable Ready',
+                  'Schedule Validated',
                   style: TextStyle(
                     fontFamily: 'Geist',
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: colors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Your schedule is validated and saved offline.',
+                  'Timetable saved offline and ready to use.',
                   style: TextStyle(
                     fontFamily: 'Geist',
-                    fontSize: 12,
+                    fontSize: 12.5,
                     color: colors.textSecondary,
                   ),
                 ),
@@ -537,48 +654,29 @@ class _SetupScreenState extends State<SetupScreen>
   }
 
   Widget _buildProgressIndicator(RelationalColors colors) {
-    final step = _showStepThree ? 3 : (_showStepTwo ? 2 : 1);
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final currentStep = _showStepThree ? 3 : (_showStepTwo ? 2 : 1);
     return Row(
       children: [
-        _progressDot(step >= 1, colors, pulse: step == 1),
+        _progressCircle(1, currentStep >= 1, currentStep == 1, colors),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: WavyProgressBar(
-              value: step >= 2 ? 1.0 : 0.0,
-              activeColor: colors.action,
-              trackColor: colors.borderSubtle,
-              height: 6.0,
-              amplitude: 2.2,
-              wavelength: 22.0,
-              strokeWidth: 2.0,
-              animate: !reduceMotion,
-              valueDuration: const Duration(milliseconds: 500),
-            ),
+          child: Container(
+            height: 2,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            color: currentStep >= 2 ? colors.action : colors.borderSubtle,
           ),
         ),
-        _progressDot(step >= 2, colors, pulse: step == 2),
+        _progressCircle(2, currentStep >= 2, currentStep == 2, colors),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: WavyProgressBar(
-              value: step >= 3 ? 1.0 : 0.0,
-              activeColor: colors.action,
-              trackColor: colors.borderSubtle,
-              height: 6.0,
-              amplitude: 2.2,
-              wavelength: 22.0,
-              strokeWidth: 2.0,
-              animate: !reduceMotion,
-              valueDuration: const Duration(milliseconds: 500),
-            ),
+          child: Container(
+            height: 2,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            color: currentStep >= 3 ? colors.action : colors.borderSubtle,
           ),
         ),
-        _progressDot(step >= 3, colors, pulse: step == 3),
-        const SizedBox(width: AppSpacing.sm),
+        _progressCircle(3, currentStep >= 3, currentStep == 3, colors),
+        const SizedBox(width: AppSpacing.md),
         Text(
-          'Step $step of 3',
+          'Step $currentStep of 3',
           style: TextStyle(
             fontFamily: 'Geist',
             fontSize: 12,
@@ -590,21 +688,23 @@ class _SetupScreenState extends State<SetupScreen>
     );
   }
 
-  Widget _progressDot(bool active, RelationalColors colors, {bool pulse = false}) {
-    final anim = (active && pulse) ? _activeDotPulseScale : null;
-    return AnimatedBuilder(
-      animation: anim ?? _activeDotPulseScale,
-      builder: (context, child) {
-        final scale = (active && pulse) ? _activeDotPulseScale.value : 1.0;
-        return Transform.scale(scale: scale, child: child);
-      },
-      child: AnimatedContainer(
-        duration: _duration(250),
-        width: 10,
-        height: 10,
-        decoration: BoxDecoration(
-          color: active ? colors.action : colors.borderSubtle,
-          shape: BoxShape.circle,
+  Widget _progressCircle(int number, bool reached, bool active, RelationalColors colors) {
+    return Container(
+      width: 22,
+      height: 22,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: reached ? colors.action : colors.surfaceContainerHighest,
+        shape: BoxShape.circle,
+        border: active ? Border.all(color: colors.surface, width: 2) : null,
+      ),
+      child: Text(
+        '$number',
+        style: TextStyle(
+          fontFamily: 'Geist',
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: reached ? colors.onAction : colors.textSecondary,
         ),
       ),
     );
@@ -613,98 +713,108 @@ class _SetupScreenState extends State<SetupScreen>
   Widget _buildStepOne(RelationalColors colors) {
     return _stepCard(
       stepNumber: '1',
-      title: 'Generate with AI',
-      body: 'Tap an AI assistant below. We’ll automatically copy the prompt and open the app. '
-          'Simply attach your timetable photo, paste the prompt, and copy the reply.',
+      title: 'Get Timetable Prompt',
+      body: 'Copy our extraction prompt, paste it into your preferred assistant along with a photo of your timetable, then copy the result.',
       colors: colors,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1-Tap AI Quick-Launch Action Grid
-          _buildAiLauncherButton(
-            title: 'Google Gemini',
-            subtitle: 'Recommended • Fast photo recognition',
-            icon: Icons.auto_awesome_rounded,
-            badge: 'Fast',
-            onTap: () => _launchAiAssistant(
-              name: 'Google Gemini',
-              url: 'https://gemini.google.com/',
-            ),
-            colors: colors,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _buildAiLauncherButton(
-            title: 'ChatGPT',
-            subtitle: 'OpenAI • Reasoning models',
-            icon: Icons.chat_bubble_outline_rounded,
-            badge: null,
-            onTap: () => _launchAiAssistant(
-              name: 'ChatGPT',
-              url: 'https://chatgpt.com/',
-            ),
-            colors: colors,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _buildAiLauncherButton(
-            title: 'Claude',
-            subtitle: 'Anthropic • Detailed table extraction',
-            icon: Icons.table_chart_outlined,
-            badge: null,
-            onTap: () => _launchAiAssistant(
-              name: 'Claude',
-              url: 'https://claude.ai/',
-            ),
-            colors: colors,
-          ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Secondary Action: Just Copy Prompt (for DeepSeek, Copilot, Desktop)
-          AnimatedBuilder(
-            animation: _copyBounceScale,
-            builder: (context, child) => Transform.scale(
-              scale: _copyBounceScale.value,
-              child: child,
-            ),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _copyPrompt,
-                icon: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
-                  child: Icon(
-                    _promptCopied ? Icons.check_rounded : Icons.copy_rounded,
-                    key: ValueKey(_promptCopied),
-                    size: 16,
-                    color: colors.action,
-                  ),
+          // Primary Action: Copy Prompt
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _copyPrompt,
+              icon: Icon(
+                _promptCopied ? Icons.check_circle_rounded : Icons.copy_rounded,
+                size: 18,
+              ),
+              label: Text(
+                _promptCopied ? 'Prompt Copied to Clipboard!' : 'Copy AI Prompt',
+                style: const TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
-                label: Text(
-                  _promptCopied ? 'Prompt copied!' : 'Just Copy Prompt (DeepSeek / Other)',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: colors.action,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: BorderSide(color: colors.borderSubtle),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.action,
+                foregroundColor: colors.onAction,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Assistant Selector Header
+          Text(
+            'Or launch with an assistant:',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
+          // Horizontal 3-card assistant grid
+          Row(
+            children: [
+              Expanded(
+                child: _buildAssistantChip(
+                  name: 'Gemini',
+                  icon: const GeminiBrandIcon(size: 22),
+                  isInstalled: _geminiInstalled,
+                  onTap: () => _launchAssistant(
+                    name: 'Gemini',
+                    packageName: 'com.google.android.apps.bard',
+                    fallbackUrl: 'https://gemini.google.com/',
+                    isInstalled: _geminiInstalled,
+                  ),
+                  colors: colors,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _buildAssistantChip(
+                  name: 'ChatGPT',
+                  icon: const ChatGptBrandIcon(size: 22),
+                  isInstalled: _chatGptInstalled,
+                  onTap: () => _launchAssistant(
+                    name: 'ChatGPT',
+                    packageName: 'com.openai.chatgpt',
+                    fallbackUrl: 'https://chatgpt.com/',
+                    isInstalled: _chatGptInstalled,
+                  ),
+                  colors: colors,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _buildAssistantChip(
+                  name: 'Claude',
+                  icon: const ClaudeBrandIcon(size: 22),
+                  isInstalled: _claudeInstalled,
+                  onTap: () => _launchAssistant(
+                    name: 'Claude',
+                    packageName: 'com.anthropic.claude',
+                    fallbackUrl: 'https://claude.ai/',
+                    isInstalled: _claudeInstalled,
+                  ),
+                  colors: colors,
+                ),
+              ),
+            ],
+          ),
 
           if (_stepOneComplete) ...[
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: colors.actionSubtle,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: colors.borderSubtle),
               ),
               child: Row(
                 children: [
@@ -713,8 +823,8 @@ class _SetupScreenState extends State<SetupScreen>
                   Expanded(
                     child: Text(
                       _recentlyLaunchedAi != null
-                          ? 'Prompt copied! Switched to $_recentlyLaunchedAi. Return here when you copy the result.'
-                          : 'Prompt copied! Paste it into your AI with your photo.',
+                          ? 'Prompt copied! Reopen Jadwal after copying result from $_recentlyLaunchedAi.'
+                          : 'Prompt copied! Paste it with your schedule image into your assistant.',
                       style: TextStyle(
                         fontFamily: 'Geist',
                         fontSize: 12,
@@ -730,43 +840,52 @@ class _SetupScreenState extends State<SetupScreen>
             ),
           ],
 
-          if (!_showStepTwo) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () {
-                  setState(() => _showStepTwo = true);
-                  _scrollToStepTwo();
-                },
-                icon: Icon(Icons.arrow_downward_rounded, size: 16, color: colors.action),
+          const SizedBox(height: AppSpacing.sm),
+          // Quiet secondary actions
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton.icon(
+                onPressed: _loadSampleTimetable,
+                icon: Icon(Icons.play_circle_outline_rounded, size: 16, color: colors.textSecondary),
                 label: Text(
-                  'Already have timetable data? Continue to Step 2 →',
+                  'Try Sample Timetable',
                   style: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: colors.action,
+                    fontWeight: FontWeight.w500,
+                    color: colors.textSecondary,
                   ),
                 ),
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
               ),
-            ),
-          ],
+              if (!_showStepTwo)
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() => _showStepTwo = true);
+                    _scrollToStepTwo();
+                  },
+                  icon: Icon(Icons.arrow_downward_rounded, size: 16, color: colors.action),
+                  label: Text(
+                    'Continue →',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: colors.action,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildAiLauncherButton({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required String? badge,
+  Widget _buildAssistantChip({
+    required String name,
+    required Widget icon,
+    required bool isInstalled,
     required VoidCallback onTap,
     required RelationalColors colors,
   }) {
@@ -776,82 +895,58 @@ class _SetupScreenState extends State<SetupScreen>
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
           decoration: BoxDecoration(
             color: colors.surfaceContainer,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: colors.borderSubtle),
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 36,
                 height: 36,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: colors.actionSubtle,
-                  borderRadius: BorderRadius.circular(9),
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: colors.borderSubtle.withValues(alpha: 0.6)),
                 ),
-                child: Icon(icon, size: 18, color: colors.action),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            title,
-                            style: TextStyle(
-                              fontFamily: 'Geist',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: colors.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (badge != null) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: colors.action,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              badge,
-                              style: TextStyle(
-                                fontFamily: 'Geist',
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: colors.onAction,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 12,
-                        color: colors.textSecondary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: Center(child: icon),
                 ),
               ),
-              Icon(
-                Icons.open_in_new_rounded,
-                size: 16,
-                color: colors.borderMuted,
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                name,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isInstalled ? colors.actionSubtle : colors.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  isInstalled ? 'App' : 'Web',
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: isInstalled ? colors.action : colors.textSecondary,
+                  ),
+                ),
               ),
             ],
           ),
@@ -867,18 +962,17 @@ class _SetupScreenState extends State<SetupScreen>
       stepNumber: '2',
       title: 'Review & Import',
       body: hasParsed
-          ? 'Timetable verified! Review your schedule details below and tap Import.'
-          : 'Copy the AI response and return to Jadwal — we’ll automatically grab it from your clipboard.',
+          ? 'Timetable verified! Review the schedule details below and tap Import.'
+          : 'Copy the assistant\'s reply and reopen Jadwal — we’ll automatically grab it from your clipboard.',
       colors: colors,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // If parsed, display the Visual Timetable Preview Card!
           if (hasParsed) ...[
             _buildVisualTimetablePreviewCard(_parsedTimetable!, colors),
             const SizedBox(height: AppSpacing.md),
           ] else ...[
-            // Listening State Banner
+            // Quiet Listening State Box (Static status, no looping animation)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.base),
@@ -888,41 +982,33 @@ class _SetupScreenState extends State<SetupScreen>
                 border: Border.all(color: colors.borderSubtle),
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      AnimatedBuilder(
-                        animation: _activeDotPulseScale,
-                        builder: (context, child) => Transform.scale(
-                          scale: _activeDotPulseScale.value,
-                          child: child,
-                        ),
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: colors.action,
-                            shape: BoxShape.circle,
-                          ),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: colors.action,
+                          shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Waiting for timetable data…',
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: colors.textPrimary,
-                          ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Waiting for timetable data…',
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: colors.textPrimary,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.xs),
+                  const SizedBox(height: 4),
                   Text(
-                    'Copy the response from your AI and reopen this screen. Jadwal will automatically detect it.',
+                    'Copy the response from your AI and return to Jadwal. We’ll auto-detect it from your clipboard.',
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 12,
@@ -951,17 +1037,12 @@ class _SetupScreenState extends State<SetupScreen>
             const SizedBox(height: AppSpacing.md),
           ],
 
-          // Error box if something failed
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child: _errorMessage != null
-                ? Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: _buildErrorBox(_errorMessage!, colors),
-                  )
-                : const SizedBox.shrink(),
-          ),
+          if (_errorMessage != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: _buildErrorBox(_errorMessage!, colors),
+            ),
+          ],
 
           // Primary Import Button
           SizedBox(
@@ -996,16 +1077,14 @@ class _SetupScreenState extends State<SetupScreen>
                 disabledBackgroundColor: colors.surfaceContainerHighest,
                 disabledForegroundColor: colors.borderMuted,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
 
           const SizedBox(height: AppSpacing.sm),
 
-          // Expandable Power-User manual editor
+          // Clean expandable raw JSON editor
           Center(
             child: TextButton.icon(
               onPressed: () {
@@ -1020,8 +1099,8 @@ class _SetupScreenState extends State<SetupScreen>
               ),
               label: Text(
                 _showManualJsonEditor
-                    ? 'Hide manual JSON editor'
-                    : 'Inspect / edit JSON manually or upload file',
+                    ? 'Hide raw text input'
+                    : 'Paste raw text or upload file',
                 style: TextStyle(
                   fontFamily: 'Geist',
                   fontSize: 12,
@@ -1035,21 +1114,21 @@ class _SetupScreenState extends State<SetupScreen>
             const SizedBox(height: AppSpacing.sm),
             TextField(
               controller: _jsonController,
-              maxLines: 8,
-              minLines: 4,
+              maxLines: 6,
+              minLines: 3,
               enabled: !_isProcessing,
               onChanged: (_) => _parseAndSetCurrentText(),
               style: TextStyle(
-                fontFamily: 'JetBrainsMono',
-                fontSize: 12,
+                fontFamily: 'Geist',
+                fontSize: 12.5,
                 color: colors.textPrimary,
               ),
               decoration: InputDecoration(
-                hintText: '{\n  "teacher": "Dr. Smith",\n  "timetable": { ... }\n}',
+                hintText: 'Paste timetable JSON here…',
                 hintStyle: TextStyle(
-                  fontFamily: 'JetBrainsMono',
-                  fontSize: 12,
-                  color: colors.borderMuted,
+                  fontFamily: 'Geist',
+                  fontSize: 12.5,
+                  color: colors.textSecondary,
                 ),
                 filled: true,
                 fillColor: colors.surfaceContainer,
@@ -1065,7 +1144,7 @@ class _SetupScreenState extends State<SetupScreen>
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(color: colors.action, width: 2),
                 ),
-                contentPadding: const EdgeInsets.all(AppSpacing.base),
+                contentPadding: const EdgeInsets.all(AppSpacing.md),
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -1076,7 +1155,7 @@ class _SetupScreenState extends State<SetupScreen>
                   onPressed: _isProcessing ? null : _pickAndImportJson,
                   icon: Icon(Icons.upload_file_rounded, size: 16, color: colors.action),
                   label: Text(
-                    'Upload .json file',
+                    'Upload .jadwal / .json',
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 12,
@@ -1142,7 +1221,7 @@ class _SetupScreenState extends State<SetupScreen>
       padding: const EdgeInsets.all(AppSpacing.base),
       decoration: BoxDecoration(
         color: colors.surfaceContainer,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.action.withValues(alpha: 0.35), width: 1.5),
       ),
       child: Column(
@@ -1151,11 +1230,11 @@ class _SetupScreenState extends State<SetupScreen>
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: colors.actionSubtle,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(9),
                 ),
                 child: Icon(Icons.school_rounded, color: colors.action, size: 20),
               ),
@@ -1179,7 +1258,7 @@ class _SetupScreenState extends State<SetupScreen>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
@@ -1187,10 +1266,10 @@ class _SetupScreenState extends State<SetupScreen>
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            'DETECTED',
+                            'VERIFIED',
                             style: TextStyle(
                               fontFamily: 'Geist',
-                              fontSize: 9.5,
+                              fontSize: 10,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
                               color: colors.action,
@@ -1214,33 +1293,19 @@ class _SetupScreenState extends State<SetupScreen>
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: colors.borderSubtle),
-            ),
-            child: Row(
-              children: [
-                _buildSummaryStat(
-                  label: 'Classes',
-                  value: '$totalClasses periods',
-                  colors: colors,
-                ),
-                Container(
-                  width: 1,
-                  height: 32,
-                  color: colors.borderSubtle,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                _buildSummaryStat(
-                  label: 'Teaching Days',
-                  value: '${activeDays.length} days (${activeDays.join(', ')})',
-                  colors: colors,
-                ),
-              ],
-            ),
+          Row(
+            children: [
+              _buildSummaryStat(
+                label: 'Classes',
+                value: '$totalClasses periods',
+                colors: colors,
+              ),
+              _buildSummaryStat(
+                label: 'Days',
+                value: '${activeDays.length} (${activeDays.join(', ')})',
+                colors: colors,
+              ),
+            ],
           ),
           if (firstStart != null && lastEnd != null) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -1277,8 +1342,8 @@ class _SetupScreenState extends State<SetupScreen>
             label.toUpperCase(),
             style: TextStyle(
               fontFamily: 'Geist',
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
               letterSpacing: 0.5,
               color: colors.textSecondary,
             ),
@@ -1288,7 +1353,7 @@ class _SetupScreenState extends State<SetupScreen>
             value,
             style: TextStyle(
               fontFamily: 'Geist',
-              fontSize: 12.5,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
               color: colors.textPrimary,
             ),
@@ -1318,9 +1383,8 @@ class _SetupScreenState extends State<SetupScreen>
   Widget _buildStepThree(RelationalColors colors) {
     return _stepCard(
       stepNumber: '3',
-      title: 'Enable class reminders',
-      body: 'Jadwal can notify you before each period starts. No spam — '
-          'just a quick heads-up at the right time.',
+      title: 'Class Reminders',
+      body: 'Jadwal alerts you before each period starts. Works completely offline without draining battery.',
       colors: colors,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1345,9 +1409,7 @@ class _SetupScreenState extends State<SetupScreen>
                 disabledBackgroundColor: colors.surfaceContainerHighest,
                 disabledForegroundColor: colors.textSecondary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
@@ -1372,9 +1434,7 @@ class _SetupScreenState extends State<SetupScreen>
                 disabledBackgroundColor: colors.surfaceContainerHighest,
                 disabledForegroundColor: colors.textSecondary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
@@ -1382,8 +1442,14 @@ class _SetupScreenState extends State<SetupScreen>
           Center(
             child: TextButton(
               onPressed: _navigateToHome,
-              style: TextButton.styleFrom(foregroundColor: colors.action),
-              child: const Text('Start using Jadwal →'),
+              style: TextButton.styleFrom(
+                foregroundColor: colors.action,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              child: const Text(
+                'Start using Jadwal →',
+                style: TextStyle(fontFamily: 'Geist', fontSize: 14, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ],
@@ -1433,13 +1499,13 @@ class _SetupScreenState extends State<SetupScreen>
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.base),
       decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: stepNumber == '1' && _stepOneComplete
-              ? colors.action.withValues(alpha: 0.5)
+              ? colors.action.withValues(alpha: 0.35)
               : colors.borderSubtle,
         ),
       ),
@@ -1485,12 +1551,12 @@ class _SetupScreenState extends State<SetupScreen>
             body,
             style: TextStyle(
               fontFamily: 'Geist',
-              fontSize: 13.5,
+              fontSize: 13,
               color: colors.textSecondary,
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.base),
           child,
         ],
       ),
