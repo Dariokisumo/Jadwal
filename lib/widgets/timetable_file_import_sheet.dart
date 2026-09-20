@@ -37,7 +37,7 @@ class TimetableFileImportSheet extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: colors.surfaceContainer,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) => TimetableFileImportSheet(
         timetableData: timetableData,

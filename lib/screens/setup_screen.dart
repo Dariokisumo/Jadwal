@@ -713,51 +713,12 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
   Widget _buildStepOne(RelationalColors colors) {
     return _stepCard(
       stepNumber: '1',
-      title: 'Get Timetable Prompt',
-      body: 'Copy our extraction prompt, paste it into your preferred assistant along with a photo of your timetable, then copy the result.',
+      title: 'Choose Assistant',
+      body: 'Tap an assistant to copy the prompt and generate your schedule from a photo.',
       colors: colors,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Primary Action: Copy Prompt
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _copyPrompt,
-              icon: Icon(
-                _promptCopied ? Icons.check_circle_rounded : Icons.copy_rounded,
-                size: 18,
-              ),
-              label: Text(
-                _promptCopied ? 'Prompt Copied to Clipboard!' : 'Copy AI Prompt',
-                style: const TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              style: FilledButton.styleFrom(
-                backgroundColor: colors.action,
-                foregroundColor: colors.onAction,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Assistant Selector Header
-          Text(
-            'Or launch with an assistant:',
-            style: TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-
           // Horizontal 3-card assistant grid
           Row(
             children: [
@@ -846,10 +807,27 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               TextButton.icon(
+                onPressed: _copyPrompt,
+                icon: Icon(
+                  _promptCopied ? Icons.check_circle_rounded : Icons.copy_rounded,
+                  size: 15,
+                  color: _promptCopied ? colors.action : colors.textSecondary,
+                ),
+                label: Text(
+                  _promptCopied ? 'Copied' : 'Copy prompt',
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: _promptCopied ? colors.action : colors.textSecondary,
+                  ),
+                ),
+              ),
+              TextButton.icon(
                 onPressed: _loadSampleTimetable,
                 icon: Icon(Icons.play_circle_outline_rounded, size: 16, color: colors.textSecondary),
                 label: Text(
-                  'Try Sample Timetable',
+                  'Try Sample',
                   style: TextStyle(
                     fontFamily: 'Geist',
                     fontSize: 12.5,
@@ -1008,27 +986,12 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Copy the response from your AI and return to Jadwal. We’ll auto-detect it from your clipboard.',
+                    'Copy the response from your AI and reopen Jadwal — your timetable will be detected automatically.',
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 12,
                       color: colors.textSecondary,
                       height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.tonalIcon(
-                      onPressed: () => _checkClipboardForTimetable(userInitiated: true),
-                      icon: const Icon(Icons.content_paste_rounded, size: 16),
-                      label: const Text('Paste from Clipboard'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: colors.actionSubtle,
-                        foregroundColor: colors.action,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
                     ),
                   ),
                 ],

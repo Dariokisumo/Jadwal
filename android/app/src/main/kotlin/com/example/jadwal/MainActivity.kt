@@ -3,6 +3,7 @@ package com.example.jadwal
 import android.app.AlarmManager
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -198,13 +199,19 @@ class MainActivity: FlutterActivity() {
                     }
                 }
                 "shareFile" -> {
-                    val filePath = call.argument<String>("filePath")
+                    val content = call.argument<String>("content")
+                    val fileName = call.argument<String>("fileName") ?: "timetable.jadwal"
                     val title = call.argument<String>("title") ?: "Share Timetable"
-                    val mimeType = call.argument<String>("mimeType") ?: "application/json"
-                    if (filePath != null) {
-                        result.success(shareFile(filePath, title, mimeType))
+                    val mimeType = call.argument<String>("mimeType") ?: "*/*"
+                    if (content != null) {
+                        result.success(shareFileContent(fileName, content, title, mimeType))
                     } else {
-                        result.error("INVALID_ARGUMENT", "filePath cannot be null", null)
+                        val filePath = call.argument<String>("filePath")
+                        if (filePath != null) {
+                            result.success(shareFile(filePath, title, mimeType))
+                        } else {
+                            result.error("INVALID_ARGUMENT", "content or filePath required", null)
+                        }
                     }
                 }
                 "saveFileToDownloads" -> {
@@ -264,22 +271,59 @@ class MainActivity: FlutterActivity() {
         }
     }
 
+    private fun shareFileContent(fileName: String, content: String, title: String, mimeType: String): Boolean {
+        return try {
+            val shareDir = File(cacheDir, "shared_timetables")
+            if (!shareDir.exists()) {
+                shareDir.mkdirs()
+            }
+            val file = File(shareDir, fileName)
+            file.writeText(content, Charsets.UTF_8)
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            val effectiveMimeType = when {
+                fileName.endsWith(".json", ignoreCase = true) -> "application/json"
+                fileName.endsWith(".jadwal", ignoreCase = true) -> "*/*"
+                else -> mimeType
+            }
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                type = effectiveMimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_TITLE, title)
+                putExtra(Intent.EXTRA_SUBJECT, title)
+                clipData = ClipData.newRawUri(title, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val shareIntent = Intent.createChooser(sendIntent, title).apply {
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(shareIntent)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     private fun shareFile(filePath: String, title: String, mimeType: String): Boolean {
         return try {
             val file = File(filePath)
             if (!file.exists()) return false
             val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
-            val sendIntent = Intent().apply {
-                action = Intent.ACTION_SEND
-                putExtra(Intent.EXTRA_STREAM, uri)
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
                 type = mimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_TITLE, title)
+                putExtra(Intent.EXTRA_SUBJECT, title)
+                clipData = ClipData.newRawUri(title, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            val shareIntent = Intent.createChooser(sendIntent, title)
-            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val shareIntent = Intent.createChooser(sendIntent, title).apply {
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
             startActivity(shareIntent)
             true
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            e.printStackTrace()
             false
         }
     }

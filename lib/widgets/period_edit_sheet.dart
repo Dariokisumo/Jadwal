@@ -171,7 +171,7 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
       child: Container(
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         ),
         padding: const EdgeInsets.fromLTRB(AppSpacing.base, AppSpacing.md, AppSpacing.base, AppSpacing.xl),
         child: Column(

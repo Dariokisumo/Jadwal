@@ -92,7 +92,7 @@ class _MiscScreenState extends State<MiscScreen> {
         builder: (ctx, setModalState) => Container(
           decoration: BoxDecoration(
             color: colors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           ),
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.base,

@@ -41,7 +41,7 @@ class ClipboardImportSheet extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: colors.surfaceContainer,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) => ClipboardImportSheet(
         title: title,

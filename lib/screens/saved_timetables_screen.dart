@@ -273,21 +273,26 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
   }
 
   Future<void> _directShareOrExport(SavedTimetable timetable) async {
-    final sanitizedName = timetable.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+    final rawSanitized = timetable.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+    final sanitizedName = rawSanitized.replaceAll('_', '').isEmpty ? 'Jadwal' : rawSanitized;
     final fileName = '${sanitizedName}_Timetable.jadwal';
     final fileContent = timetable.toFileContent();
 
     HapticFeedback.lightImpact();
-    await DeepLinkService.shareTimetableFile(
+    final success = await DeepLinkService.shareTimetableFile(
       fileName: fileName,
       content: fileContent,
       title: 'Share "${timetable.name}"',
     );
+    if (!success && mounted) {
+      AppFeedback.showError(context, 'Unable to open system share sheet');
+    }
   }
 
   Future<void> _showExportOptions(SavedTimetable timetable) async {
     final colors = context.relColors;
-    final sanitizedName = timetable.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+    final rawSanitized = timetable.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+    final sanitizedName = rawSanitized.replaceAll('_', '').isEmpty ? 'Jadwal' : rawSanitized;
     final fileName = '${sanitizedName}_Timetable.jadwal';
     final fileContent = timetable.toFileContent();
 
@@ -295,7 +300,7 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
       context: context,
       backgroundColor: colors.surfaceContainer,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
@@ -316,24 +321,15 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
               ),
               const SizedBox(height: AppSpacing.base),
               Text(
-                'Export Timetable File',
+                'Export "$fileName"',
                 style: TextStyle(
                   fontFamily: 'Geist',
-                  fontSize: 18,
+                  fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: colors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Export "$fileName" to device storage or share via other apps.',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 13,
-                  color: colors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.base),
+              const SizedBox(height: AppSpacing.md),
 
               // Option 1: Direct Share Sheet
               ListTile(
@@ -357,11 +353,14 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  await DeepLinkService.shareTimetableFile(
+                  final success = await DeepLinkService.shareTimetableFile(
                     fileName: fileName,
                     content: fileContent,
                     title: 'Share "${timetable.name}"',
                   );
+                  if (!success && mounted) {
+                    AppFeedback.showError(context, 'Unable to open system share sheet');
+                  }
                 },
               ),
               const SizedBox(height: AppSpacing.sm),

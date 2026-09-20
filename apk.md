@@ -2,7 +2,11 @@
 
 This document is the authoritative APK build guide, environment record, optimization reference, and automation specification for the **Jadwal** project.
 
-> **CRITICAL RULE:** Do **NOT** run `flutter clean` or wipe `~/.gradle/caches/` unless explicitly approved by the user. Caches persist across builds and allow consecutive incremental builds to finish in **12–30 seconds**. A cold rebuild from scratch takes **15–20 minutes**.
+> **CRITICAL RULES:**
+> 1. **Do NOT build APKs automatically.** Only build an APK when the user explicitly requests/instructs it.
+> 2. **Build both ABIs:** Whenever asked to build an APK (e.g. "build apk"), build **both** 64-bit (`arm64-v8a`) and 32-bit (`armeabi-v7a`) APKs using `make build-both` (or `make build` + `make build-arm32`), unless a specific ABI is explicitly requested.
+> 3. **Check `apk.md` before building.** Always review this guide before triggering any build.
+> 4. **Do NOT run `flutter clean` or wipe `~/.gradle/caches/`** unless explicitly approved by the user. Caches persist across builds and allow consecutive incremental builds to finish in **12–30 seconds**. A cold rebuild from scratch takes **15–20 minutes**.
 
 ---
 

@@ -599,6 +599,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       case 'edit':
         _openEditor();
         break;
+      case 'share':
+        _shareActiveTimetable();
+        break;
       case 'replace':
         _reimport();
         break;
@@ -611,6 +614,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       case 'update':
         _checkManualUpdate();
         break;
+    }
+  }
+
+  Future<void> _shareActiveTimetable() async {
+    if (_timetable.isEmpty) {
+      AppFeedback.showInfo(context, 'No timetable data to share');
+      return;
+    }
+
+    final teacher = _teacherName.trim().isEmpty ? 'Jadwal' : _teacherName.trim();
+    final rawSanitized = teacher.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+    final sanitizedName = rawSanitized.replaceAll('_', '').isEmpty ? 'Jadwal' : rawSanitized;
+    final fileName = '${sanitizedName}_Timetable.jadwal';
+
+    final exportMap = <String, dynamic>{
+      'app': 'jadwal',
+      'format_version': 1,
+      'teacher': _teacherName,
+      'timetable': _timetable,
+    };
+    final content = const JsonEncoder.withIndent('  ').convert(exportMap);
+
+    HapticFeedback.lightImpact();
+    final success = await DeepLinkService.shareTimetableFile(
+      fileName: fileName,
+      content: content,
+      title: 'Share "$teacher" Timetable',
+    );
+    if (!success && mounted) {
+      AppFeedback.showError(context, 'Unable to open system share sheet');
     }
   }
 
@@ -714,7 +747,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => const ThemeBottomSheet(),
     );
@@ -826,6 +859,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: _menuRow(
                   icon: Icons.edit_calendar_rounded,
                   label: 'Edit timetable',
+                  colors: colors,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'share',
+                child: _menuRow(
+                  icon: Icons.share_rounded,
+                  label: 'Share timetable',
                   colors: colors,
                 ),
               ),

@@ -94,15 +94,10 @@ class DeepLinkService {
     try {
       if (!Platform.isAndroid) return false;
 
-      // Write to app cache dir for FileProvider
-      final cacheDir = Directory.systemTemp;
-      final file = File('${cacheDir.path}/$fileName');
-      await file.writeAsString(content, flush: true);
-
       final success = await _channel.invokeMethod<bool>('shareFile', {
-        'filePath': file.absolute.path,
+        'fileName': fileName,
+        'content': content,
         'title': title,
-        'mimeType': 'application/json',
       });
       return success ?? false;
     } catch (_) {
