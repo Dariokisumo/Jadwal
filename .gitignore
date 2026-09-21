@@ -24,8 +24,10 @@ key.properties
 # Local workspace notes and unreferenced source material
 .agents/
 .claude/
+.codex/
 .impeccable/
 .skills/
+.opencode/
 AGENTS.md
 claudemem.md
 skills-lock.json
@@ -34,5 +36,13 @@ imgs/
 Icons/
 test_tz.dart
 test_utc_tz.dart
-.opencode/
 living-map/
+
+# AI agent context docs (local-only)
+PRODUCT.md
+DESIGN.md
+apk.md
+
+# Website source (deployed from dariokisumo.github.io repo)
+index.html
+liquid-glass.js
