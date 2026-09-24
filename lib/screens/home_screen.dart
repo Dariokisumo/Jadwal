@@ -637,9 +637,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       case 'edit':
         _openEditor();
         break;
-      case 'share':
-        _shareActiveTimetable();
-        break;
       case 'replace':
         _reimport();
         break;
@@ -652,38 +649,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       case 'update':
         _checkManualUpdate();
         break;
-    }
-  }
-
-  Future<void> _shareActiveTimetable() async {
-    if (_timetable.isEmpty) {
-      AppFeedback.showInfo(context, 'No timetable data to share');
-      return;
-    }
-
-    final teacher =
-        _teacherName.trim().isEmpty ? 'Jadwal' : _teacherName.trim();
-    final rawSanitized = teacher.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
-    final sanitizedName =
-        rawSanitized.replaceAll('_', '').isEmpty ? 'Jadwal' : rawSanitized;
-    final fileName = '${sanitizedName}_Timetable.jadwal';
-
-    final exportMap = <String, dynamic>{
-      'app': 'jadwal',
-      'format_version': 1,
-      'teacher': _teacherName,
-      'timetable': _timetable,
-    };
-    final content = const JsonEncoder.withIndent('  ').convert(exportMap);
-
-    HapticFeedback.lightImpact();
-    final success = await DeepLinkService.shareTimetableFile(
-      fileName: fileName,
-      content: content,
-      title: 'Share "$teacher" Timetable',
-    );
-    if (!success && mounted) {
-      AppFeedback.showError(context, 'Unable to open system share sheet');
     }
   }
 
@@ -888,14 +853,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
               PopupMenuItem(
-                value: 'share',
-                child: _menuRow(
-                  icon: Icons.share_rounded,
-                  label: 'Share timetable',
-                  colors: colors,
-                ),
-              ),
-              PopupMenuItem(
                 value: 'replace',
                 child: _menuRow(
                   icon: Icons.upload_file_rounded,
@@ -977,23 +934,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: List.generate(_allDaysInOrder.length, (index) {
-                      final dayKey = _allDaysInOrder[index];
-                      return Expanded(
-                        child: DayChip(
-                          dayKey: dayKey,
-                          label: kDayAbbreviations[dayKey] ??
-                              dayKey.substring(0, 2),
-                          date: weekDates[index],
-                          isSelected: dayKey == _selectedDayKey,
-                          isToday: dayKey == _todayKey,
-                          isFriday: dayKey == 'friday',
-                          onTap: () => _onDaySelected(dayKey),
-                          colors: colors,
-                        ),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final gap = AppSpacing.xs;
+                      final textScale =
+                          MediaQuery.textScalerOf(context).scale(1);
+                      final columns =
+                          constraints.maxWidth < 320 || textScale > 1.2
+                              ? 4
+                              : _allDaysInOrder.length;
+                      final chipWidth =
+                          (constraints.maxWidth - gap * (columns - 1)) /
+                              columns;
+
+                      return Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: gap,
+                        runSpacing: gap,
+                        children:
+                            List.generate(_allDaysInOrder.length, (index) {
+                          final dayKey = _allDaysInOrder[index];
+                          return SizedBox(
+                            width: chipWidth,
+                            child: DayChip(
+                              dayKey: dayKey,
+                              label: kDayAbbreviations[dayKey] ??
+                                  dayKey.substring(0, 2),
+                              date: weekDates[index],
+                              isSelected: dayKey == _selectedDayKey,
+                              isToday: dayKey == _todayKey,
+                              isFriday: dayKey == 'friday',
+                              onTap: () => _onDaySelected(dayKey),
+                              colors: colors,
+                            ),
+                          );
+                        }),
                       );
-                    }),
+                    },
                   ),
                 ],
               ),

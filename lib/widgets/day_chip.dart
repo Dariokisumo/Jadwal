@@ -96,26 +96,13 @@ class DayChip extends StatelessWidget {
                   ),
                   FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '${date.day}',
-                          maxLines: 1,
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: textColor,
-                          ),
-                        ),
-                        if (isFriday) ...[
-                          const SizedBox(width: AppSpacing.xs),
-                          Icon(
-                            Icons.coffee_rounded,
-                            size: 12,
-                            color: textColor,
-                          ),
-                        ],
-                      ],
+                    child: Text(
+                      '${date.day}',
+                      maxLines: 1,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
+                      ),
                     ),
                   ),
                   SizedBox(

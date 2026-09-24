@@ -125,6 +125,7 @@ void main() {
     );
 
     expect(find.text('25'), findsOneWidget);
+    expect(find.byIcon(Icons.coffee_rounded), findsNothing);
     expect(
       find.bySemanticsLabel(RegExp(r'today.*selected.*rest day')),
       findsOneWidget,
