@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 
 import '../constants/period_schedule.dart';
 import '../constants/spacing.dart';
@@ -11,8 +10,10 @@ import '../services/storage_service.dart';
 import '../services/timetable_timings_applier.dart';
 import '../theme/relational_colors.dart';
 import '../widgets/app_feedback.dart';
+import '../widgets/break_indicator.dart';
 import '../widgets/period_slot_card.dart';
 import '../widgets/profile_import_dialog.dart';
+import '../widgets/time_picker_helper.dart';
 
 class PeriodTimingsScreen extends StatefulWidget {
   const PeriodTimingsScreen({super.key});
@@ -517,40 +518,15 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
     final currentTimes = _currentProfile.getTimingFor(periodNumber);
     final currentStr = isStart ? currentTimes[0] : currentTimes[1];
 
-    final timePattern = RegExp(r'^(\d{1,2}):(\d{2})\s(AM|PM)$');
-    final match = timePattern.firstMatch(currentStr.trim());
-
-    TimeOfDay initial;
-    if (match != null) {
-      var hour = int.parse(match.group(1)!);
-      final minute = int.parse(match.group(2)!);
-      final period = match.group(3);
-      if (period == 'PM' && hour != 12) hour += 12;
-      if (period == 'AM' && hour == 12) hour = 0;
-      initial = TimeOfDay(hour: hour, minute: minute);
-    } else {
-      initial = isStart
+    final formatted = await pickHmmATime(
+      context,
+      currentStr,
+      fallback: isStart
           ? const TimeOfDay(hour: 8, minute: 0)
-          : const TimeOfDay(hour: 8, minute: 40);
-    }
-
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: initial,
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-          child: child!,
-        );
-      },
+          : const TimeOfDay(hour: 8, minute: 40),
     );
 
-    if (picked != null) {
-      final hour = picked.hourOfPeriod == 0 ? 12 : picked.hourOfPeriod;
-      final minute = picked.minute.toString().padLeft(2, '0');
-      final period = picked.period == DayPeriod.am ? 'AM' : 'PM';
-      final formatted = '$hour:$minute $period';
-
+    if (formatted != null) {
       setState(() {
         final existing = _currentProfile.getTimingFor(periodNumber);
         if (isStart) {
@@ -924,9 +900,17 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
       // Calculate break from previous period if i > 1
       if (i > 1) {
         final prevTimes = _currentProfile.getTimingFor(i - 1);
-        final gap = _calculateGapMinutes(prevTimes[1], startTime);
+        final gap = gapMinutesHmmA(prevTimes[1], startTime);
         if (gap != null && gap > 0) {
-          slots.add(BreakIndicatorRow(gapMinutes: gap, colors: colors));
+          final String label;
+          if (gap >= 35) {
+            label = 'Lunch • ${gap}m';
+          } else if (gap >= 15) {
+            label = 'Recess • ${gap}m';
+          } else {
+            label = 'Break • ${gap}m';
+          }
+          slots.add(BreakIndicator(label: label, gapMinutes: gap));
         }
       }
 
@@ -1055,15 +1039,4 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
     );
   }
 
-  int? _calculateGapMinutes(String endStr, String nextStartStr) {
-    try {
-      final format = DateFormat('h:mm a');
-      final prevEnd = format.parse(endStr.trim());
-      final nextStart = format.parse(nextStartStr.trim());
-      final diff = nextStart.difference(prevEnd).inMinutes;
-      return diff;
-    } catch (_) {
-      return null;
-    }
-  }
 }

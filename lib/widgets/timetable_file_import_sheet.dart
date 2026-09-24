@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../constants/spacing.dart';
 import '../constants/timetable_prompt.dart';
 import '../theme/relational_colors.dart';
+import 'stat_cell.dart';
 
 enum TimetableImportAction {
   activate,
@@ -169,10 +170,13 @@ class TimetableFileImportSheet extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      _buildDetailStat(
+                      StatCell(
                         label: 'CLASSES',
                         value: '$totalClasses periods',
                         colors: colors,
+                        labelSize: 10,
+                        labelWeight: FontWeight.w700,
+                        uppercase: false,
                       ),
                       Container(
                         width: 1,
@@ -180,10 +184,13 @@ class TimetableFileImportSheet extends StatelessWidget {
                         color: colors.borderSubtle,
                         margin: const EdgeInsets.symmetric(horizontal: 10),
                       ),
-                      _buildDetailStat(
+                      StatCell(
                         label: 'DAYS',
                         value: '${activeDays.length} days (${activeDays.join(', ')})',
                         colors: colors,
+                        labelSize: 10,
+                        labelWeight: FontWeight.w700,
+                        uppercase: false,
                       ),
                     ],
                   ),
@@ -277,42 +284,6 @@ class TimetableFileImportSheet extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildDetailStat({
-    required String label,
-    required String value,
-    required RelationalColors colors,
-  }) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-              color: colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: colors.textPrimary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
       ),
     );
   }

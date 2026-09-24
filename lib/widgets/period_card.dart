@@ -246,7 +246,7 @@ class _PeriodCardState extends State<PeriodCard> {
       child: _cardContent(
         subjectColor: colors.borderMuted,
         secondaryColor: colors.borderMuted,
-        badge: _doneBadge(colors: colors),
+        badge: _toggleFinishedBtn(isDone: true, colors: colors),
         strikethrough: true,
         colors: colors,
         isDone: true,
@@ -254,83 +254,71 @@ class _PeriodCardState extends State<PeriodCard> {
     );
   }
 
-  Widget _doneBadge({required RelationalColors colors}) {
+  Widget _toggleFinishedBtn({required bool isDone, required RelationalColors colors}) {
+    final onToggle = widget.onToggleFinished;
+    if (!isDone && onToggle == null) return const SizedBox.shrink();
     return Semantics(
-      label: 'Done. Tap to mark as unfinished',
+      label: isDone ? 'Done. Tap to mark as unfinished' : 'Mark as finished',
       button: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: widget.onToggleFinished != null
+        onTap: onToggle != null
             ? () {
                 HapticFeedback.lightImpact();
-                widget.onToggleFinished!();
+                onToggle();
               }
             : null,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.borderSubtle, width: 0.5),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_rounded, size: 12, color: colors.textSecondary),
-              const SizedBox(width: 4),
-              Text(
-                'Done',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: colors.textSecondary,
+        child: isDone
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colors.borderSubtle, width: 0.5),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_rounded, size: 12, color: colors.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Done',
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colors.borderSubtle.withValues(alpha: 0.12),
+                      border: Border.all(
+                        color: colors.borderSubtle,
+                        width: 1.2,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.check_rounded,
+                      size: 13,
+                      color: colors.borderMuted,
+                    ),
+                  ),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _unobtrusiveCheckBtn({required RelationalColors colors}) {
-    if (widget.onToggleFinished == null) return const SizedBox.shrink();
-    return Semantics(
-      label: 'Mark as finished',
-      button: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          HapticFeedback.lightImpact();
-          widget.onToggleFinished!();
-        },
-        child: Padding(
-          padding: const EdgeInsets.only(left: 4),
-          child: Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colors.borderSubtle.withValues(alpha: 0.12),
-                border: Border.all(
-                  color: colors.borderSubtle,
-                  width: 1.2,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.check_rounded,
-                size: 13,
-                color: colors.borderMuted,
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -438,7 +426,7 @@ class _PeriodCardState extends State<PeriodCard> {
         ),
         if (badge != null) badge,
         if (widget.onToggleFinished != null && !isDone)
-          _unobtrusiveCheckBtn(colors: colors),
+          _toggleFinishedBtn(isDone: false, colors: colors),
       ],
     );
   }

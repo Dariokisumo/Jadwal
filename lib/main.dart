@@ -6,19 +6,10 @@ import 'services/deep_link_service.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 import 'services/widget_data_service.dart';
-import 'theme/primitives.dart';
 import 'theme/relational_theme.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
 final ValueNotifier<String> accentNotifier = ValueNotifier('default');
-
-const Map<String, Color> accentSeeds = {
-  'default': Primitives.actionGold,
-  'navy': Primitives.actionNavy,
-  'copper': Primitives.actionCopper,
-  'sage': Primitives.actionSage,
-  'slate': Primitives.actionSlate,
-};
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,16 +59,11 @@ Future<void> main() async {
     }
   }
 
-  switch (savedTheme) {
-    case 'light':
-      themeNotifier.value = ThemeMode.light;
-      break;
-    case 'dark':
-      themeNotifier.value = ThemeMode.dark;
-      break;
-    default:
-      themeNotifier.value = ThemeMode.system;
-  }
+  const themeModes = {
+    'light': ThemeMode.light,
+    'dark': ThemeMode.dark,
+  };
+  themeNotifier.value = themeModes[savedTheme] ?? ThemeMode.system;
 
   accentNotifier.value = savedAccent;
 
@@ -96,27 +82,24 @@ class JadwalApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeNotifier,
-      builder: (context, mode, _) {
-        return ValueListenableBuilder<String>(
-          valueListenable: accentNotifier,
-          builder: (context, accentName, _) {
-            return MaterialApp(
-              title: 'Jadwal',
-              debugShowCheckedModeBanner: false,
-              theme: buildRelationalTheme(
-                Brightness.light,
-                accent: accentName,
-              ),
-              darkTheme: buildRelationalTheme(
-                Brightness.dark,
-                accent: accentName,
-              ),
-              themeMode: mode,
-              home: startOnHome ? const HomeScreen() : const SetupScreen(),
-            );
-          },
+    return ListenableBuilder(
+      listenable: Listenable.merge([themeNotifier, accentNotifier]),
+      builder: (context, _) {
+        final mode = themeNotifier.value;
+        final accentName = accentNotifier.value;
+        return MaterialApp(
+          title: 'Jadwal',
+          debugShowCheckedModeBanner: false,
+          theme: buildRelationalTheme(
+            Brightness.light,
+            accent: accentName,
+          ),
+          darkTheme: buildRelationalTheme(
+            Brightness.dark,
+            accent: accentName,
+          ),
+          themeMode: mode,
+          home: startOnHome ? const HomeScreen() : const SetupScreen(),
         );
       },
     );

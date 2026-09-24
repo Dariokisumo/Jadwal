@@ -69,12 +69,10 @@ class UpdateService {
 
     HttpClient? client;
     try {
-      client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 5);
+      client = _newClient(const Duration(seconds: 5));
 
       final request = await client.getUrl(Uri.parse(_releasesApiUrl));
-      request.headers.set('User-Agent', 'Jadwal-Android-App');
-      request.headers.set('Accept', 'application/vnd.github+json');
+      _setUa(request, accept: 'application/vnd.github+json');
 
       final response = await request.close().timeout(const Duration(seconds: 6));
       if (response.statusCode != 200) {
@@ -221,102 +219,67 @@ class UpdateService {
 
   static const _platform = MethodChannel('com.jadwal/exact_alarm');
 
+  // ponytail: single generic wrapper for all Platform.isAndroid+invokeMethod+try/catch.
+  static Future<T?> _invoke<T>(String method,
+      [Map<String, dynamic>? args]) async {
+    try {
+      if (!Platform.isAndroid) return null;
+      return await _platform.invokeMethod<T>(method, args);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ponytail: single HttpClient factory + UA header helper (timeouts/accepts still per-call).
+  static HttpClient _newClient(Duration timeout) {
+    final c = HttpClient();
+    c.connectionTimeout = timeout;
+    return c;
+  }
+
+  static void _setUa(HttpClientRequest req, {String? accept}) {
+    req.headers.set('User-Agent', 'Jadwal-Android-App');
+    if (accept != null) req.headers.set('Accept', accept);
+  }
+
   /// Returns the installed application version from the system package manager,
   /// falling back to [kAppVersion] if unavailable.
   static Future<String> getInstalledVersion() async {
-    try {
-      if (Platform.isAndroid) {
-        final version = await _platform.invokeMethod<String>('getAppVersion');
-        if (version != null && version.trim().isNotEmpty) {
-          return version.trim();
-        }
-      }
-    } catch (_) {}
-    return kAppVersion;
-  }
-
-  /// Resolves the direct CDN download URL for a GitHub release asset by fetching
-  /// the HTTP 302 'Location' redirect header. This bypasses the GitHub redirect
-  /// hop in the browser for faster downloads.
-  static Future<String> resolveDirectDownloadUrl(String url) async {
-    if (!url.contains('github.com')) return url;
-    HttpClient? client;
-    try {
-      client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 4);
-      final request = await client.getUrl(Uri.parse(url));
-      request.followRedirects = false;
-      request.headers.set('User-Agent', 'Jadwal-Android-App');
-      final response = await request.close().timeout(const Duration(seconds: 4));
-      if (response.isRedirect) {
-        final location = response.headers.value(HttpHeaders.locationHeader);
-        if (location != null && location.isNotEmpty) {
-          return location;
-        }
-      }
-    } catch (_) {
-      // Fall back to original url if resolution fails
-    } finally {
-      client?.close(force: true);
+    final version = await _invoke<String>('getAppVersion');
+    if (version != null && version.trim().isNotEmpty) {
+      return version.trim();
     }
-    return url;
+    return kAppVersion;
   }
 
   /// Detects whether the current device's hardware/OS supports 64-bit ('arm64')
   /// or only 32-bit ('arm32').
   static Future<String> getDeviceArchitecture() async {
-    try {
-      if (Platform.isAndroid) {
-        final arch = await _platform.invokeMethod<String>('getDeviceArchitecture');
-        if (arch != null && arch.isNotEmpty) {
-          return arch;
-        }
-      }
-    } catch (_) {}
+    final arch = await _invoke<String>('getDeviceArchitecture');
+    if (arch != null && arch.isNotEmpty) return arch;
     return 'arm64'; // Default to modern 64-bit architecture
   }
 
   /// Gets the local storage directory for APK downloads.
-  static Future<String?> getDownloadDirectory() async {
-    try {
-      if (Platform.isAndroid) {
-        return await _platform.invokeMethod<String>('getDownloadDirectory');
-      }
-    } catch (_) {}
-    return null;
-  }
+  static Future<String?> getDownloadDirectory() =>
+      _invoke<String>('getDownloadDirectory');
 
   /// Prompts the Android system package installer to install the downloaded APK.
   static Future<bool> installApk(String filePath) async {
-    try {
-      if (Platform.isAndroid) {
-        final result = await _platform.invokeMethod<bool>('installApk', {'filePath': filePath});
-        return result ?? false;
-      }
-    } catch (_) {}
-    return false;
+    final result = await _invoke<bool>('installApk', {'filePath': filePath});
+    return result ?? false;
   }
 
   /// Checks if the user has permitted the app to install unknown packages.
   static Future<bool> canInstallUnknownApps() async {
-    try {
-      if (Platform.isAndroid) {
-        final result = await _platform.invokeMethod<bool>('canInstallUnknownApps');
-        return result ?? true;
-      }
-    } catch (_) {}
-    return true;
+    final result = await _invoke<bool>('canInstallUnknownApps');
+    return result ?? true;
   }
 
   /// Opens the system settings screen for "Install unknown apps".
   static Future<bool> openInstallUnknownAppsSettings() async {
-    try {
-      if (Platform.isAndroid) {
-        final result = await _platform.invokeMethod<bool>('openInstallUnknownAppsSettings');
-        return result ?? false;
-      }
-    } catch (_) {}
-    return false;
+    final result = await _invoke<bool>('openInstallUnknownAppsSettings');
+    return result ?? false;
   }
 
   /// Enqueues the APK download into Android's system DownloadManager with
@@ -325,21 +288,12 @@ class UpdateService {
     required String url,
     required String fileName,
     required String title,
-  }) async {
-    try {
-      if (Platform.isAndroid) {
-        final id = await _platform.invokeMethod<int>(
-          'downloadWithDownloadManager',
-          {
-            'url': url,
-            'fileName': fileName,
-            'title': title,
-          },
-        );
-        return id;
-      }
-    } catch (_) {}
-    return null;
+  }) {
+    return _invoke<int>('downloadWithDownloadManager', {
+      'url': url,
+      'fileName': fileName,
+      'title': title,
+    });
   }
 
   /// Downloads an APK update file directly in-app, invoking [onProgress] with
@@ -367,14 +321,14 @@ class UpdateService {
     HttpClient? client;
     IOSink? sink;
     try {
-      client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 15);
+      client = _newClient(const Duration(seconds: 15));
 
       final request = await client.getUrl(Uri.parse(url));
       request.followRedirects = true;
       request.maxRedirects = 5;
-      request.headers.set('User-Agent', 'Jadwal-Android-App');
-      request.headers.set('Accept', 'application/octet-stream, application/vnd.android.package-archive, */*');
+      _setUa(request,
+          accept:
+              'application/octet-stream, application/vnd.android.package-archive, */*');
 
       final response = await request.close();
       if (response.statusCode != 200) {

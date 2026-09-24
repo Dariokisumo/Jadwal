@@ -28,6 +28,7 @@ key.properties
 .impeccable/
 .skills/
 .opencode/
+opencode.json
 AGENTS.md
 claudemem.md
 skills-lock.json

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../constants/timetable_prompt.dart';
+import '../models/timing_profile.dart';
 
 class ValidationResult {
   final bool isValid;
@@ -74,52 +75,11 @@ class JsonValidator {
   /// - 12-hour with or without space: "2:00 PM", "2:00PM", "02:00 pm", "2:00am"
   /// - 24-hour military format: "14:00", "08:30", "0:00"
   /// Returns null if the format cannot be recognized as a valid time.
+  /// ponytail: canonical parse lives in [TimingProfile.parseTimeToMinutes]; this is parse→format.
   static String? normalizeTime(String raw) {
-    final s = raw.trim();
-    if (s.isEmpty) return null;
-
-    // 1. Check for 12-hour pattern (with or without space, case-insensitive)
-    final regex12 = RegExp(r'^0?(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)$');
-    final match12 = regex12.firstMatch(s);
-    if (match12 != null) {
-      final hour = int.tryParse(match12.group(1)!);
-      final min = int.tryParse(match12.group(2)!);
-      final period = match12.group(3)!.toUpperCase();
-      if (hour == null || hour < 1 || hour > 12) return null;
-      if (min == null || min < 0 || min > 59) return null;
-      final minStr = min.toString().padLeft(2, '0');
-      return '$hour:$minStr $period';
-    }
-
-    // 2. Check for 24-hour pattern: "14:00", "08:30", "0:00"
-    final regex24 = RegExp(r'^0?(\d{1,2}):(\d{2})$');
-    final match24 = regex24.firstMatch(s);
-    if (match24 != null) {
-      final h24 = int.tryParse(match24.group(1)!);
-      final min = int.tryParse(match24.group(2)!);
-      if (h24 == null || h24 < 0 || h24 > 23) return null;
-      if (min == null || min < 0 || min > 59) return null;
-
-      final String period;
-      final int h12;
-      if (h24 == 0) {
-        h12 = 12;
-        period = 'AM';
-      } else if (h24 < 12) {
-        h12 = h24;
-        period = 'AM';
-      } else if (h24 == 12) {
-        h12 = 12;
-        period = 'PM';
-      } else {
-        h12 = h24 - 12;
-        period = 'PM';
-      }
-      final minStr = min.toString().padLeft(2, '0');
-      return '$h12:$minStr $period';
-    }
-
-    return null;
+    final mins = TimingProfile.parseTimeToMinutes(raw);
+    if (mins == null) return null;
+    return TimingProfile.formatMinutesToTime(mins);
   }
 
   /// Validates and heals the structure of an imported timetable JSON before it

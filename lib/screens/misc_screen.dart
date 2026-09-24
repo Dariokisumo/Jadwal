@@ -61,19 +61,9 @@ class _MiscScreenState extends State<MiscScreen> {
     }
   }
 
-  Future<void> _openSavedTimetables() async {
+  Future<void> _openScreen(Widget screen) async {
     final modified = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const SavedTimetablesScreen()),
-    );
-    if (modified == true) {
-      _timetableModified = true;
-    }
-    _loadSettings();
-  }
-
-  Future<void> _openPeriodTimings() async {
-    final modified = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const PeriodTimingsScreen()),
+      MaterialPageRoute(builder: (_) => screen),
     );
     if (modified == true) {
       _timetableModified = true;
@@ -273,7 +263,7 @@ class _MiscScreenState extends State<MiscScreen> {
                     title: 'Saved Timetables',
                     subtitle: 'Active: $_activeTimetableName',
                     trailingBadge: '$_savedTimetablesCount saved',
-                    onTap: _openSavedTimetables,
+                    onTap: () => _openScreen(const SavedTimetablesScreen()),
                     colors: colors,
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -284,7 +274,7 @@ class _MiscScreenState extends State<MiscScreen> {
                     title: 'Period Timings',
                     subtitle: 'Bell schedules and period durations',
                     trailingBadge: _activeProfileName,
-                    onTap: _openPeriodTimings,
+                    onTap: () => _openScreen(const PeriodTimingsScreen()),
                     colors: colors,
                   ),
                   const SizedBox(height: AppSpacing.sm),

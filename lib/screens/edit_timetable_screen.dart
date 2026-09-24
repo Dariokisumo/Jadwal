@@ -169,35 +169,51 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
     );
   }
 
-  void _showDeleteConfirmation(String dayKey, int periodNumber) {
+  void _showConfirmDialog({
+    required String title,
+    required String body,
+    required String confirmLabel,
+    required VoidCallback onConfirm,
+    String cancelLabel = 'Cancel',
+  }) {
     final colors = context.relColors;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(
-          'Delete Period?',
-          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
+        title: Text(
+          title,
+          style: const TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
         ),
         content: Text(
-          'This will remove Period $periodNumber from ${kDayLabels[dayKey] ?? dayKey}.',
+          body,
           style: const TextStyle(fontFamily: 'Geist'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
+            child: Text(cancelLabel, style: const TextStyle(fontFamily: 'Geist')),
           ),
           TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pop(ctx);
-              _controller.deletePeriod(dayKey, periodNumber);
-            },
+            onPressed: () => onConfirm(),
             style: TextButton.styleFrom(foregroundColor: colors.danger),
-            child: const Text('Delete', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
+            child: Text(confirmLabel, style: const TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
           ),
         ],
       ),
+    );
+  }
+
+  void _showDeleteConfirmation(String dayKey, int periodNumber) {
+    _showConfirmDialog(
+      title: 'Delete Period?',
+      body: 'This will remove Period $periodNumber from ${kDayLabels[dayKey] ?? dayKey}.',
+      confirmLabel: 'Delete',
+      onConfirm: () {
+        Navigator.of(context)
+          ..pop()
+          ..pop();
+        _controller.deletePeriod(dayKey, periodNumber);
+      },
     );
   }
 
@@ -352,34 +368,15 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
       return;
     }
 
-    final colors = context.relColors;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Delete Period $periodNumber Column?',
-          style: const TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          'This will remove Period $periodNumber and all its scheduled classes across all days. Subsequent periods will be shifted down.',
-          style: TextStyle(fontFamily: 'Geist', color: colors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              HapticFeedback.mediumImpact();
-              _controller.removePeriodColumn(periodNumber);
-            },
-            style: TextButton.styleFrom(foregroundColor: colors.danger),
-            child: const Text('Delete Column', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+    _showConfirmDialog(
+      title: 'Delete Period $periodNumber Column?',
+      body: 'This will remove Period $periodNumber and all its scheduled classes across all days. Subsequent periods will be shifted down.',
+      confirmLabel: 'Delete Column',
+      onConfirm: () {
+        Navigator.of(context).pop();
+        HapticFeedback.mediumImpact();
+        _controller.removePeriodColumn(periodNumber);
+      },
     );
   }
 
@@ -540,33 +537,53 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
   }
 
   void _showUnsavedChangesDialog() {
-    final colors = context.relColors;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(
-          'Unsaved Changes',
-          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
-        ),
-        content: const Text(
-          'You have unsaved changes. Do you want to discard them?',
-          style: TextStyle(fontFamily: 'Geist'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Keep Editing', style: TextStyle(fontFamily: 'Geist')),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.of(context).pop();
-            },
-            style: TextButton.styleFrom(foregroundColor: colors.danger),
-            child: const Text('Discard', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+    _showConfirmDialog(
+      title: 'Unsaved Changes',
+      body: 'You have unsaved changes. Do you want to discard them?',
+      confirmLabel: 'Discard',
+      cancelLabel: 'Keep Editing',
+      onConfirm: () {
+        Navigator.of(context)
+          ..pop()
+          ..pop();
+      },
     );
   }
+}
+
+class DashedBorderPainter extends CustomPainter {
+  final Color color;
+
+  const DashedBorderPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    const dashWidth = 4.0;
+    const dashSpace = 3.0;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      const Radius.circular(8),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final metrics = path.computeMetrics().first;
+    var distance = 0.0;
+
+    while (distance < metrics.length) {
+      final start = metrics.getTangentForOffset(distance)!.position;
+      final end = distance + dashWidth < metrics.length
+          ? metrics.getTangentForOffset(distance + dashWidth)!.position
+          : metrics.getTangentForOffset(metrics.length)!.position;
+      canvas.drawLine(start, end, paint);
+      distance += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

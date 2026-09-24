@@ -53,6 +53,73 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
     );
   }
 
+  String _sanitizeFileName(String name) {
+    final raw = name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+    final sanitized = raw.replaceAll('_', '').isEmpty ? 'Jadwal' : raw;
+    return '${sanitized}_Timetable.jadwal';
+  }
+
+  Future<String?> _askScheduleName({
+    required String title,
+    required String initial,
+    String? description,
+    String? hint,
+    required String confirmLabel,
+  }) async {
+    final colors = context.relColors;
+    final controller = TextEditingController(text: initial);
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          title,
+          style: const TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (description != null) ...[
+              Text(
+                description,
+                style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: colors.textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            TextField(
+              controller: controller,
+              autofocus: true,
+              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: colors.textPrimary),
+              decoration: InputDecoration(
+                labelText: 'Schedule Name',
+                hintText: hint,
+                filled: true,
+                fillColor: colors.surfaceContainer,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: TextStyle(color: colors.textSecondary)),
+          ),
+          FilledButton(
+            onPressed: () {
+              final t = controller.text.trim();
+              if (t.isNotEmpty) Navigator.pop(ctx, t);
+            },
+            style: FilledButton.styleFrom(backgroundColor: colors.action),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _activate(SavedTimetable timetable) async {
     if (timetable.id == _activeId) return;
     HapticFeedback.mediumImpact();
@@ -77,7 +144,6 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
   }
 
   Future<void> _showSaveCurrentDialog() async {
-    final colors = context.relColors;
     final current = await StorageService.loadTimetable();
     if (current == null) {
       if (mounted) {
@@ -87,113 +153,39 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
     }
 
     final teacher = current['teacher'] as String? ?? 'Teacher';
-    final controller = TextEditingController(text: '$teacher Schedule');
-
     if (!mounted) return;
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: colors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Save Current Timetable',
-          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Save a snapshot of your live schedule to your library:',
-              style: TextStyle(fontFamily: 'Geist', fontSize: 13, color: colors.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: colors.textPrimary),
-              decoration: InputDecoration(
-                labelText: 'Schedule Name',
-                hintText: 'e.g. Term 1, Exam Week',
-                filled: true,
-                fillColor: colors.surfaceContainer,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: TextStyle(color: colors.textSecondary)),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              if (name.isEmpty) return;
-              Navigator.pop(ctx);
-
-              final newEntry = SavedTimetable(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                name: name,
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-                data: current,
-              );
-
-              _timetables.insert(0, newEntry);
-              await StorageService.saveSavedTimetables(_timetables);
-              setState(() => _timetableModified = true);
-
-              if (mounted) {
-                AppFeedback.showSuccess(context, 'Saved "$name" to library');
-              }
-            },
-            style: FilledButton.styleFrom(backgroundColor: colors.action),
-            child: const Text('Save to Library'),
-          ),
-        ],
-      ),
+    final name = await _askScheduleName(
+      title: 'Save Current Timetable',
+      initial: '$teacher Schedule',
+      description: 'Save a snapshot of your live schedule to your library:',
+      hint: 'e.g. Term 1, Exam Week',
+      confirmLabel: 'Save to Library',
     );
+    if (name == null || name.isEmpty) return;
+
+    final newEntry = SavedTimetable(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      data: current,
+    );
+
+    _timetables.insert(0, newEntry);
+    await StorageService.saveSavedTimetables(_timetables);
+    setState(() => _timetableModified = true);
+
+    if (mounted) {
+      AppFeedback.showSuccess(context, 'Saved "$name" to library');
+    }
   }
 
   Future<void> _rename(SavedTimetable timetable) async {
-    final colors = context.relColors;
-    final controller = TextEditingController(text: timetable.name);
-
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: colors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Rename Timetable',
-          style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: TextStyle(fontFamily: 'Geist', fontSize: 14, color: colors.textPrimary),
-          decoration: InputDecoration(
-            labelText: 'Schedule Name',
-            filled: true,
-            fillColor: colors.surfaceContainer,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: TextStyle(color: colors.textSecondary)),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            style: FilledButton.styleFrom(backgroundColor: colors.action),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+    final newName = await _askScheduleName(
+      title: 'Rename Timetable',
+      initial: timetable.name,
+      confirmLabel: 'Save',
     );
 
     if (newName != null && newName.isNotEmpty && newName != timetable.name) {
@@ -273,9 +265,7 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
   }
 
   Future<void> _directShareOrExport(SavedTimetable timetable) async {
-    final rawSanitized = timetable.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
-    final sanitizedName = rawSanitized.replaceAll('_', '').isEmpty ? 'Jadwal' : rawSanitized;
-    final fileName = '${sanitizedName}_Timetable.jadwal';
+    final fileName = _sanitizeFileName(timetable.name);
     final fileContent = timetable.toFileContent();
 
     HapticFeedback.lightImpact();
@@ -291,9 +281,7 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
 
   Future<void> _showExportOptions(SavedTimetable timetable) async {
     final colors = context.relColors;
-    final rawSanitized = timetable.name.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
-    final sanitizedName = rawSanitized.replaceAll('_', '').isEmpty ? 'Jadwal' : rawSanitized;
-    final fileName = '${sanitizedName}_Timetable.jadwal';
+    final fileName = _sanitizeFileName(timetable.name);
     final fileContent = timetable.toFileContent();
 
     showModalBottomSheet(

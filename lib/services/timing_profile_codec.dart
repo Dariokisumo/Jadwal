@@ -90,31 +90,32 @@ abstract final class TimingProfileCodec {
     } catch (_) {}
   }
 
+  // ponytail: single helper preserving the original marker priority
+  // (jadwal:// > JADWAL_PROFILE: > https?://); each slices marker → whitespace.
+  static String _extractToken(String s) {
+    String slice(String marker) {
+      final start = s.indexOf(marker);
+      if (start == -1) return s;
+      final end = s.indexOf(RegExp(r'\s'), start);
+      return end == -1 ? s.substring(start) : s.substring(start, end);
+    }
+
+    if (s.contains('jadwal://profile?data=')) {
+      return slice('jadwal://profile?data=');
+    }
+    if (s.contains('JADWAL_PROFILE:')) return slice('JADWAL_PROFILE:');
+    final m = RegExp(r'https?://').firstMatch(s);
+    if (m != null) {
+      final end = s.indexOf(RegExp(r'\s'), m.start);
+      return end == -1 ? s.substring(m.start) : s.substring(m.start, end);
+    }
+    return s;
+  }
+
   /// Parses a share payload, deep link URI, or raw JSON into a validated [TimingProfile].
   static TimingProfile? decode(String raw) {
     try {
-      var cleaned = raw.trim();
-
-      // Extract substring if user pasted an entire message with multiple lines
-      if (cleaned.contains('jadwal://profile?data=')) {
-        final startIdx = cleaned.indexOf('jadwal://profile?data=');
-        final endIdx = cleaned.indexOf(RegExp(r'\s'), startIdx);
-        cleaned = endIdx == -1
-            ? cleaned.substring(startIdx)
-            : cleaned.substring(startIdx, endIdx);
-      } else if (cleaned.contains('JADWAL_PROFILE:')) {
-        final startIdx = cleaned.indexOf('JADWAL_PROFILE:');
-        final endIdx = cleaned.indexOf(RegExp(r'\s'), startIdx);
-        cleaned = endIdx == -1
-            ? cleaned.substring(startIdx)
-            : cleaned.substring(startIdx, endIdx);
-      } else if (cleaned.contains(RegExp(r'https?://'))) {
-        final startIdx = cleaned.indexOf(RegExp(r'https?://'));
-        final endIdx = cleaned.indexOf(RegExp(r'\s'), startIdx);
-        cleaned = endIdx == -1
-            ? cleaned.substring(startIdx)
-            : cleaned.substring(startIdx, endIdx);
-      }
+      var cleaned = _extractToken(raw.trim());
 
       // Extract from deep link URL: jadwal://profile?data=... or https://...
       if (cleaned.startsWith('jadwal://') ||
@@ -137,16 +138,8 @@ abstract final class TimingProfileCodec {
         cleaned = Uri.decodeComponent(cleaned);
       } catch (_) {}
 
-      // Strip any residual path or hash fragments
-      while (cleaned.startsWith('/p/') ||
-          cleaned.startsWith('p/') ||
-          cleaned.startsWith('p#') ||
-          cleaned.startsWith('#')) {
-        if (cleaned.startsWith('/p/')) cleaned = cleaned.substring(3);
-        if (cleaned.startsWith('p/')) cleaned = cleaned.substring(2);
-        if (cleaned.startsWith('p#')) cleaned = cleaned.substring(2);
-        if (cleaned.startsWith('#')) cleaned = cleaned.substring(1);
-      }
+      // Strip any residual path or hash fragments (ponytail: single RegExp ≡ while loop).
+      cleaned = cleaned.replaceFirst(RegExp(r'^(?:/p/|p/|p#|#)+'), '');
 
       // Extract from code format: JADWAL_PROFILE:...
       if (cleaned.startsWith('JADWAL_PROFILE:')) {

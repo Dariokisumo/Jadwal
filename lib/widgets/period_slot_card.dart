@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../theme/relational_colors.dart';
+import 'time_picker_helper.dart';
 
 class PeriodSlotCard extends StatelessWidget {
   final int periodNumber;
@@ -22,14 +22,10 @@ class PeriodSlotCard extends StatelessWidget {
   });
 
   int? _calculateDurationMinutes() {
-    try {
-      final format = DateFormat('h:mm a');
-      final s = format.parse(startTime.trim());
-      final e = format.parse(endTime.trim());
-      return e.difference(s).inMinutes;
-    } catch (_) {
-      return null;
-    }
+    final s = parseHmmA(startTime);
+    final e = parseHmmA(endTime);
+    if (s == null || e == null) return null;
+    return e.difference(s).inMinutes;
   }
 
   @override
@@ -177,75 +173,6 @@ class TimePickerChip extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class BreakIndicatorRow extends StatelessWidget {
-  final int gapMinutes;
-  final RelationalColors colors;
-
-  const BreakIndicatorRow({
-    super.key,
-    required this.gapMinutes,
-    required this.colors,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final String label;
-    if (gapMinutes >= 35) {
-      label = 'Lunch • ${gapMinutes}m';
-    } else if (gapMinutes >= 15) {
-      label = 'Recess • ${gapMinutes}m';
-    } else {
-      label = 'Break • ${gapMinutes}m';
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Divider(
-              color: colors.borderSubtle.withValues(alpha: 0.6),
-              thickness: 1,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.coffee_rounded, size: 12, color: colors.action),
-                  const SizedBox(width: 4),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            child: Divider(
-              color: colors.borderSubtle.withValues(alpha: 0.6),
-              thickness: 1,
-            ),
-          ),
-        ],
       ),
     );
   }

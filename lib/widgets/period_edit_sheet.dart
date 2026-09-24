@@ -5,6 +5,7 @@ import '../constants/period_schedule.dart';
 import '../constants/spacing.dart';
 import '../constants/timetable_prompt.dart';
 import '../theme/relational_colors.dart';
+import 'time_picker_helper.dart';
 
 class PeriodEditSheet extends StatefulWidget {
   final String dayKey;
@@ -119,37 +120,15 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
 
   Future<void> _pickTime({required bool isStart}) async {
     final current = isStart ? _startTime : _endTime;
-    final timePattern = RegExp(r'^(\d{1,2}):(\d{2})\s(AM|PM)$');
-    final match = timePattern.firstMatch(current);
-
-    TimeOfDay initial;
-    if (match != null) {
-      var hour = int.parse(match.group(1)!);
-      final minute = int.parse(match.group(2)!);
-      final period = match.group(3);
-      if (period == 'PM' && hour != 12) hour += 12;
-      if (period == 'AM' && hour == 12) hour = 0;
-      initial = TimeOfDay(hour: hour, minute: minute);
-    } else {
-      initial = isStart ? const TimeOfDay(hour: 8, minute: 0) : const TimeOfDay(hour: 8, minute: 40);
-    }
-
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: initial,
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-          child: child!,
-        );
-      },
+    final formatted = await pickHmmATime(
+      context,
+      current,
+      fallback: isStart
+          ? const TimeOfDay(hour: 8, minute: 0)
+          : const TimeOfDay(hour: 8, minute: 40),
     );
 
-    if (picked != null) {
-      final hour = picked.hourOfPeriod == 0 ? 12 : picked.hourOfPeriod;
-      final minute = picked.minute.toString().padLeft(2, '0');
-      final period = picked.period == DayPeriod.am ? 'AM' : 'PM';
-      final formatted = '$hour:$minute $period';
+    if (formatted != null) {
       setState(() {
         if (isStart) {
           _startTime = formatted;
@@ -469,39 +448,3 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
   }
 }
 
-class DashedBorderPainter extends CustomPainter {
-  final Color color;
-
-  const DashedBorderPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
-
-    const dashWidth = 4.0;
-    const dashSpace = 3.0;
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      const Radius.circular(8),
-    );
-
-    final path = Path()..addRRect(rrect);
-    final metrics = path.computeMetrics().first;
-    var distance = 0.0;
-
-    while (distance < metrics.length) {
-      final start = metrics.getTangentForOffset(distance)!.position;
-      final end = distance + dashWidth < metrics.length
-          ? metrics.getTangentForOffset(distance + dashWidth)!.position
-          : metrics.getTangentForOffset(metrics.length)!.position;
-      canvas.drawLine(start, end, paint);
-      distance += dashWidth + dashSpace;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

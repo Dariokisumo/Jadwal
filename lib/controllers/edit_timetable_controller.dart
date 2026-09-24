@@ -34,20 +34,16 @@ class EditTimetableController extends ChangeNotifier {
   bool get canUndo => _undoStack.isNotEmpty;
   bool get canRedo => _redoStack.isNotEmpty;
 
+  // ponytail: one helper for the 7× `p is int ? p : int.tryParse(...)` copies.
+  static int? periodNum(dynamic v) => v is int ? v : int.tryParse(v.toString());
+
   static int calculateMaxPeriod(Map<String, dynamic> timetable) {
-    int maxP = 0;
-    for (final val in timetable.values) {
-      if (val is List) {
-        for (final item in val) {
-          if (item is Map && item['period'] != null) {
-            final p = item['period'];
-            final n = p is int ? p : int.tryParse(p.toString()) ?? 0;
-            if (n > maxP) maxP = n;
-          }
-        }
-      }
-    }
-    return maxP;
+    // ponytail: ONE shared scan in StorageService; handles inner or outer maps.
+    final inner = timetable.containsKey('timetable') &&
+            timetable['timetable'] is Map
+        ? (timetable['timetable'] as Map)
+        : timetable;
+    return StorageService.maxPeriodFromDays(inner);
   }
 
   void _pushState() {
@@ -96,7 +92,7 @@ class EditTimetableController extends ChangeNotifier {
     final list = _getDayList(dayKey);
     for (final entry in list) {
       final p = entry['period'];
-      final num = p is int ? p : int.tryParse(p.toString());
+      final num = periodNum(p);
       if (num == periodNumber) return entry;
     }
     return null;
@@ -115,7 +111,7 @@ class EditTimetableController extends ChangeNotifier {
     final list = _getDayList(dayKey);
     for (var i = 0; i < list.length; i++) {
       final p = list[i]['period'];
-      final num = p is int ? p : int.tryParse(p.toString());
+      final num = periodNum(p);
       if (num == periodNumber) {
         list[i] = {...data, 'period': periodNumber};
         break;
@@ -130,7 +126,7 @@ class EditTimetableController extends ChangeNotifier {
     final list = _getDayList(dayKey);
     list.removeWhere((entry) {
       final p = entry['period'];
-      final num = p is int ? p : int.tryParse(p.toString());
+      final num = periodNum(p);
       return num == periodNumber;
     });
     _timetable[dayKey] = list;
@@ -151,12 +147,12 @@ class EditTimetableController extends ChangeNotifier {
       final list = _getDayList(dayKey);
       list.removeWhere((entry) {
         final p = entry['period'];
-        final num = p is int ? p : int.tryParse(p.toString());
+        final num = periodNum(p);
         return num == periodNumber;
       });
       for (final entry in list) {
         final p = entry['period'];
-        final num = p is int ? p : int.tryParse(p.toString()) ?? 0;
+        final num = periodNum(p) ?? 0;
         if (num > periodNumber) {
           entry['period'] = num - 1;
         }
@@ -179,7 +175,7 @@ class EditTimetableController extends ChangeNotifier {
     final list = _getDayList(dayKey);
     final fromIdx = list.indexWhere((e) {
       final p = e['period'];
-      return (p is int ? p : int.tryParse(p.toString())) == fromPeriod;
+      return periodNum(p) == fromPeriod;
     });
     if (fromIdx < 0) return;
     final item = list.removeAt(fromIdx);

@@ -74,17 +74,17 @@ class WidgetDataService {
       final periods =
           daySchedule.map((e) => Period.fromJson(e as Map<String, dynamic>)).toList();
 
-      Period? _firstWhere(bool Function(Period) test) {
-        for (final p in periods) {
-          if (test(p)) return p;
-        }
-        return null;
-      }
-
-      final current = _firstWhere((p) => p.status == PeriodStatus.active);
-      final next = _firstWhere(
-        (p) => p.status == PeriodStatus.upcoming && p.minutesUntilStart != null,
-      );
+      // ponytail: stdlib firstWhere(orElse:) instead of hand-rolled loop.
+      final current = periods.cast<Period?>().firstWhere(
+            (p) => p!.status == PeriodStatus.active,
+            orElse: () => null,
+          );
+      final next = periods.cast<Period?>().firstWhere(
+            (p) =>
+                p!.status == PeriodStatus.upcoming &&
+                p.minutesUntilStart != null,
+            orElse: () => null,
+          );
 
       return {
         'type': 'today',

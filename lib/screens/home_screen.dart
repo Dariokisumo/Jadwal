@@ -4,7 +4,6 @@ import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -23,7 +22,7 @@ import '../theme/relational_colors.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/break_indicator.dart';
 import '../widgets/clipboard_import_sheet.dart';
-import '../widgets/home_day_selector.dart';
+import '../widgets/day_chip.dart';
 import '../widgets/period_card.dart';
 import '../widgets/profile_import_dialog.dart';
 import '../widgets/theme_bottom_sheet.dart';
@@ -676,15 +675,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       timetableData: data,
     );
 
+    final teacher = data['teacher'] as String? ?? 'Teacher';
+    final now = DateTime.now();
+    final newEntry = SavedTimetable(
+      id: now.millisecondsSinceEpoch.toString(),
+      name: '$teacher\'s Timetable',
+      createdAt: now,
+      updatedAt: now,
+      data: data,
+    );
     if (action == TimetableImportAction.activate && mounted) {
-      final teacher = data['teacher'] as String? ?? 'Teacher';
-      final newEntry = SavedTimetable(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: '$teacher\'s Timetable',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        data: data,
-      );
       final library = await StorageService.loadSavedTimetables();
       library.insert(0, newEntry);
       await StorageService.saveSavedTimetables(library);
@@ -698,14 +698,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         AppFeedback.showSuccess(context, 'Activated timetable for $teacher!');
       }
     } else if (action == TimetableImportAction.saveOnly && mounted) {
-      final teacher = data['teacher'] as String? ?? 'Teacher';
-      final newEntry = SavedTimetable(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: '$teacher\'s Timetable',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        data: data,
-      );
       final library = await StorageService.loadSavedTimetables();
       library.insert(0, newEntry);
       await StorageService.saveSavedTimetables(library);
@@ -767,25 +759,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-    final colors = context.relColors;
+      final colors = context.relColors;
 
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 32,
-              height: 32,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                color: colors.action,
-              ),
-            ),
-          ],
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            color: colors.action,
+          ),
         ),
-      ),
-    );
+      );
     }
 
     final colors = context.relColors;
@@ -838,7 +820,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 fontWeight: FontWeight.w500,
                 color: colors.textSecondary,
               ),
-            ).animate().fadeIn(duration: 200.ms),
+            ),
           ],
         ),
         actions: [
@@ -924,12 +906,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       body: SafeArea(
         child: Column(
           children: [
-            HomeDaySelector(
-              allDays: _allDaysInOrder,
-              selectedDayKey: _selectedDayKey,
-              todayKey: _todayKey,
-              onDaySelected: _onDaySelected,
-              colors: colors,
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: colors.borderSubtle,
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: _allDaysInOrder.map((dayKey) {
+                  return DayChip(
+                    dayKey: dayKey,
+                    label: kDayAbbreviations[dayKey] ?? dayKey.substring(0, 2),
+                    isSelected: dayKey == _selectedDayKey,
+                    isToday: dayKey == _todayKey,
+                    isFriday: dayKey == 'friday',
+                    onTap: () => _onDaySelected(dayKey),
+                    colors: colors,
+                  );
+                }).toList(),
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
@@ -1074,31 +1078,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     required String title,
     required String subtitle,
     required RelationalColors colors,
-    VoidCallback? onIconTap,
   }) {
-    final iconWidget = Container(
-      width: 64,
-      height: 64,
-      decoration: BoxDecoration(
-        color: colors.actionSubtle,
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon, size: 30, color: colors.action),
-    );
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (onIconTap != null)
-              GestureDetector(
-                onTap: onIconTap,
-                child: iconWidget,
-              )
-            else
-              iconWidget,
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: colors.actionSubtle,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 30, color: colors.action),
+            ),
             const SizedBox(height: 16),
             Text(
               title,
@@ -1126,84 +1121,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _restDayState(RelationalColors colors) {
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final cupIcon = Container(
-      width: 72,
-      height: 72,
-      decoration: BoxDecoration(
-        color: colors.actionSubtle,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: colors.action.withValues(alpha: 0.2),
-          width: 1.5,
-        ),
-      ),
-      child: Icon(
-        Icons.coffee_rounded,
-        size: 36,
-        color: colors.action,
-      ),
-    );
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (reduceMotion)
-              cupIcon
-            else
-              cupIcon
-                  .animate(onPlay: (c) => c.repeat(reverse: true))
-                  .scale(
-                    begin: const Offset(1, 1),
-                    end: const Offset(1.05, 1.05),
-                    duration: 2000.ms,
-                    curve: Curves.easeInOut,
-                  )
-                  .then(delay: 1000.ms),
-            const SizedBox(height: 16),
-            Text(
-              'Rest Day',
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: colors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              "It's Friday — no classes scheduled. Enjoy your day off!",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Geist',
-                fontSize: 13.5,
-                color: colors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return _emptyState(
+      icon: Icons.coffee_rounded,
+      title: 'Rest Day',
+      subtitle: "It's Friday — no classes scheduled. Enjoy your day off!",
+      colors: colors,
     );
   }
 
   Widget _allDoneState(RelationalColors colors) {
-    return Column(
-      children: [
-        Expanded(
-          child: _emptyState(
-            icon: Icons.check_circle_outline,
-            title: 'All done for today!',
-            subtitle: "You've finished every period scheduled today.",
-            colors: colors,
-            onIconTap: () {
-              HapticFeedback.lightImpact();
-              setState(() => _showFinishedOverride = true);
-            },
-          ),
-        ),
-      ],
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        setState(() => _showFinishedOverride = true);
+      },
+      child: _emptyState(
+        icon: Icons.check_circle_outline,
+        title: 'All done for today!',
+        subtitle: "You've finished every period scheduled today.",
+        colors: colors,
+      ),
     );
   }
 }

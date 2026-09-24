@@ -109,19 +109,7 @@ class StorageService {
     final timetable = await loadTimetable();
     int maxFromTimetable = 0;
     if (timetable != null && timetable['timetable'] is Map) {
-      final days = timetable['timetable'] as Map;
-      for (final dayList in days.values) {
-        if (dayList is List) {
-          for (final item in dayList) {
-            if (item is Map && item['period'] != null) {
-              final p = item['period'] is int
-                  ? item['period'] as int
-                  : int.tryParse(item['period'].toString()) ?? 0;
-              if (p > maxFromTimetable) maxFromTimetable = p;
-            }
-          }
-        }
-      }
+      maxFromTimetable = maxPeriodFromDays(timetable['timetable'] as Map);
     }
     if (stored != null) {
       return stored > maxFromTimetable
@@ -131,6 +119,39 @@ class StorageService {
     return maxFromTimetable > 0
         ? (maxFromTimetable > 9 ? maxFromTimetable : 9)
         : 9;
+  }
+
+  /// ponytail: ONE shared max-period scan (also used by EditTimetableController).
+  static int maxPeriodFromDays(Map days) {
+    var maxP = 0;
+    for (final dayList in days.values) {
+      if (dayList is List) {
+        for (final item in dayList) {
+          if (item is Map && item['period'] != null) {
+            final p = item['period'];
+            final n = p is int ? p : int.tryParse(p.toString()) ?? 0;
+            if (n > maxP) maxP = n;
+          }
+        }
+      }
+    }
+    return maxP;
+  }
+
+  // ponytail: one fallback builder; [save] preserves the original
+  // raw==null (saved) vs empty/corrupt (unsaved) distinction.
+  static Future<List<TimingProfile>> _defaultWithSave({
+    int? periodCount,
+    Map<String, dynamic>? timetable,
+    bool save = true,
+  }) async {
+    final count = periodCount ?? await loadPeriodCount();
+    final tt = timetable ?? await loadTimetable();
+    final initial = [
+      TimingProfile.defaultProfile(periodCount: count, timetable: tt)
+    ];
+    if (save) await saveTimingProfiles(initial);
+    return initial;
   }
 
   static Future<void> saveTimingProfiles(List<TimingProfile> profiles) async {
@@ -146,13 +167,7 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_timingProfilesKey);
     if (raw == null) {
-      final count = periodCount ?? await loadPeriodCount();
-      final tt = timetable ?? await loadTimetable();
-      final initial = [
-        TimingProfile.defaultProfile(periodCount: count, timetable: tt)
-      ];
-      await saveTimingProfiles(initial);
-      return initial;
+      return _defaultWithSave(periodCount: periodCount, timetable: timetable);
     }
     try {
       final decoded = jsonDecode(raw) as List;
@@ -160,17 +175,13 @@ class StorageService {
           .map((e) => TimingProfile.fromJson(e as Map<String, dynamic>))
           .toList();
       if (profiles.isEmpty) {
-        final count = periodCount ?? await loadPeriodCount();
-        final tt = timetable ?? await loadTimetable();
-        return [
-          TimingProfile.defaultProfile(periodCount: count, timetable: tt)
-        ];
+        return _defaultWithSave(
+            periodCount: periodCount, timetable: timetable, save: false);
       }
       return profiles;
     } catch (_) {
-      final count = periodCount ?? await loadPeriodCount();
-      final tt = timetable ?? await loadTimetable();
-      return [TimingProfile.defaultProfile(periodCount: count, timetable: tt)];
+      return _defaultWithSave(
+          periodCount: periodCount, timetable: timetable, save: false);
     }
   }
 
@@ -250,23 +261,7 @@ class StorageService {
     final raw = prefs.getString(_savedTimetablesKey);
 
     if (raw == null || raw.trim().isEmpty) {
-      final current = await loadTimetable();
-      if (current != null) {
-        final teacher = current['teacher'] as String? ?? 'Teacher';
-        final initial = [
-          SavedTimetable(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            name: '$teacher\'s Timetable',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-            data: current,
-          ),
-        ];
-        await saveSavedTimetables(initial);
-        await saveActiveTimetableId(initial.first.id);
-        return initial;
-      }
-      return [];
+      return _seedFromLive();
     }
 
     try {
@@ -276,27 +271,31 @@ class StorageService {
           .toList();
 
       if (list.isEmpty) {
-        final current = await loadTimetable();
-        if (current != null) {
-          final teacher = current['teacher'] as String? ?? 'Teacher';
-          final initial = [
-            SavedTimetable(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              name: '$teacher\'s Timetable',
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-              data: current,
-            ),
-          ];
-          await saveSavedTimetables(initial);
-          await saveActiveTimetableId(initial.first.id);
-          return initial;
-        }
+        return _seedFromLive();
       }
       return list;
     } catch (_) {
       return [];
     }
+  }
+
+  // ponytail: one seed helper for both empty-library branches.
+  static Future<List<SavedTimetable>> _seedFromLive() async {
+    final current = await loadTimetable();
+    if (current == null) return [];
+    final teacher = current['teacher'] as String? ?? 'Teacher';
+    final initial = [
+      SavedTimetable(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: '$teacher\'s Timetable',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        data: current,
+      ),
+    ];
+    await saveSavedTimetables(initial);
+    await saveActiveTimetableId(initial.first.id);
+    return initial;
   }
 
   /// Persists the ID of the currently active saved timetable.

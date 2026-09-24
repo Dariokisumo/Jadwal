@@ -26,17 +26,17 @@ List<String> defaultTimingForPeriod(int periodNumber) {
   final startMin = 970 + (offset - 1) * 45;
   final endMin = startMin + 40;
 
-  String formatMinutes(int totalMin) {
-    var h = (totalMin ~/ 60) % 24;
-    final m = totalMin % 60;
-    final period = h >= 12 ? 'PM' : 'AM';
-    var hour12 = h % 12;
-    if (hour12 == 0) hour12 = 12;
-    final mStr = m.toString().padLeft(2, '0');
-    return '$hour12:$mStr $period';
-  }
+  return [_formatMinutes(startMin), _formatMinutes(endMin)];
+}
 
-  return [formatMinutes(startMin), formatMinutes(endMin)];
+String _formatMinutes(int totalMin) {
+  final h = (totalMin ~/ 60) % 24;
+  final m = totalMin % 60;
+  final period = h >= 12 ? 'PM' : 'AM';
+  var hour12 = h % 12;
+  if (hour12 == 0) hour12 = 12;
+  final mStr = m.toString().padLeft(2, '0');
+  return '$hour12:$mStr $period';
 }
 
 /// Classroom options for the class selector dropdown.

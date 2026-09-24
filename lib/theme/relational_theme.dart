@@ -5,6 +5,47 @@ import 'relational_colors.dart';
 
 const String _kFontFamily = 'Geist';
 
+class _AccentSet {
+  const _AccentSet(this.light, this.subtle, this.dark, this.darkContainer);
+  final Color light;
+  final Color subtle;
+  final Color dark;
+  final Color darkContainer;
+}
+
+const Map<String, _AccentSet> _kAccents = {
+  'navy': _AccentSet(
+    Primitives.actionNavy,
+    Primitives.actionNavySubtle,
+    Primitives.actionNavyDark,
+    Primitives.actionNavyDarkContainer,
+  ),
+  'copper': _AccentSet(
+    Primitives.actionCopper,
+    Primitives.actionCopperSubtle,
+    Primitives.actionCopperDark,
+    Primitives.actionCopperDarkContainer,
+  ),
+  'sage': _AccentSet(
+    Primitives.actionSage,
+    Primitives.actionSageSubtle,
+    Primitives.actionSageDark,
+    Primitives.actionSageDarkContainer,
+  ),
+  'slate': _AccentSet(
+    Primitives.actionSlate,
+    Primitives.actionSlateSubtle,
+    Primitives.actionSlateDark,
+    Primitives.actionSlateDarkContainer,
+  ),
+  'default': _AccentSet(
+    Primitives.actionGold,
+    Primitives.actionGoldSubtle,
+    Primitives.actionGoldDark,
+    Primitives.actionGoldDarkContainer,
+  ),
+};
+
 /// Build the light or dark [ThemeData] using the relational two-tier token system.
 ///
 /// Handles both [Brightness] values and the user's selected accent preset ([accent]),
@@ -17,65 +58,10 @@ ThemeData buildRelationalTheme(
   final isDark = brightness == Brightness.dark;
 
   // Resolve accent seed and variants per brightness
-  final Color actionColor;
-  final Color actionHover;
-  final Color actionSubtle;
-  final Color activeGlow;
-
-  switch (accent) {
-    case 'navy':
-      actionColor = isDark ? Primitives.actionNavyDark : Primitives.actionNavy;
-      actionHover =
-          isDark ? Primitives.actionNavy : Primitives.actionNavyHover;
-      actionSubtle = isDark
-          ? Primitives.actionNavyDarkContainer
-          : Primitives.actionNavySubtle;
-      activeGlow = isDark ? Primitives.actionNavyDark : Primitives.actionNavy;
-      break;
-    case 'copper':
-      actionColor =
-          isDark ? Primitives.actionCopperDark : Primitives.actionCopper;
-      actionHover =
-          isDark ? Primitives.actionCopper : Primitives.actionCopperHover;
-      actionSubtle = isDark
-          ? Primitives.actionCopperDarkContainer
-          : Primitives.actionCopperSubtle;
-      activeGlow =
-          isDark ? Primitives.actionCopperDark : Primitives.actionCopper;
-      break;
-    case 'sage':
-      actionColor =
-          isDark ? Primitives.actionSageDark : Primitives.actionSage;
-      actionHover =
-          isDark ? Primitives.actionSage : Primitives.actionSageHover;
-      actionSubtle = isDark
-          ? Primitives.actionSageDarkContainer
-          : Primitives.actionSageSubtle;
-      activeGlow =
-          isDark ? Primitives.actionSageDark : Primitives.actionSage;
-      break;
-    case 'slate':
-      actionColor =
-          isDark ? Primitives.actionSlateDark : Primitives.actionSlate;
-      actionHover =
-          isDark ? Primitives.actionSlate : Primitives.actionSlateHover;
-      actionSubtle = isDark
-          ? Primitives.actionSlateDarkContainer
-          : Primitives.actionSlateSubtle;
-      activeGlow =
-          isDark ? Primitives.actionSlateDark : Primitives.actionSlate;
-      break;
-    case 'default':
-    default:
-      actionColor = isDark ? Primitives.actionGoldDark : Primitives.actionGold;
-      actionHover =
-          isDark ? Primitives.actionGold : Primitives.actionGoldHover;
-      actionSubtle = isDark
-          ? Primitives.actionGoldDarkContainer
-          : Primitives.actionGoldSubtle;
-      activeGlow = isDark ? Primitives.actionGoldDark : Primitives.actionGold;
-      break;
-  }
+  final set = _kAccents[accent] ?? _kAccents['default']!;
+  final actionColor = isDark ? set.dark : set.light;
+  final actionSubtle = isDark ? set.darkContainer : set.subtle;
+  final activeGlow = actionColor;
 
   final surfaceColor =
       isDark ? Primitives.surfaceDark : Primitives.surfaceLight;
@@ -95,19 +81,13 @@ ThemeData buildRelationalTheme(
   final dangerColor = isDark ? Primitives.dangerDark : Primitives.danger;
   final dangerSubtleColor =
       isDark ? Primitives.dangerSubtleDark : Primitives.dangerSubtleLight;
-  final successColor = isDark ? Primitives.successDark : Primitives.success;
-  final successSubtleColor =
-      isDark ? Primitives.successSubtleDark : Primitives.successSubtleLight;
 
   final relationalColors = RelationalColors(
     action: actionColor,
-    actionHover: actionHover,
     actionSubtle: actionSubtle,
     onAction: Colors.white,
     danger: dangerColor,
     dangerSubtle: dangerSubtleColor,
-    success: successColor,
-    successSubtle: successSubtleColor,
     surface: surfaceColor,
     surfaceContainer: surfaceContainerColor,
     surfaceContainerHighest: surfaceContainerHighestColor,

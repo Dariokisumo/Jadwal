@@ -8,13 +8,10 @@ import 'package:flutter/material.dart';
 class RelationalColors extends ThemeExtension<RelationalColors> {
   const RelationalColors({
     required this.action,
-    required this.actionHover,
     required this.actionSubtle,
     required this.onAction,
     required this.danger,
     required this.dangerSubtle,
-    required this.success,
-    required this.successSubtle,
     required this.surface,
     required this.surfaceContainer,
     required this.surfaceContainerHighest,
@@ -28,9 +25,6 @@ class RelationalColors extends ThemeExtension<RelationalColors> {
   /// Primary interactive and active state accent color.
   final Color action;
 
-  /// Pressed, focused, or hover state for action elements (−0.07 L shift).
-  final Color actionHover;
-
   /// Subtle container tint for active cards, ongoing badges, and avatars.
   final Color actionSubtle;
 
@@ -42,12 +36,6 @@ class RelationalColors extends ThemeExtension<RelationalColors> {
 
   /// Subtle container tint for error alerts.
   final Color dangerSubtle;
-
-  /// Semantic success / verified / completed color.
-  final Color success;
-
-  /// Subtle container tint for completed badges.
-  final Color successSubtle;
 
   /// Base scaffold and surface background.
   final Color surface;
@@ -76,13 +64,10 @@ class RelationalColors extends ThemeExtension<RelationalColors> {
   @override
   RelationalColors copyWith({
     Color? action,
-    Color? actionHover,
     Color? actionSubtle,
     Color? onAction,
     Color? danger,
     Color? dangerSubtle,
-    Color? success,
-    Color? successSubtle,
     Color? surface,
     Color? surfaceContainer,
     Color? surfaceContainerHighest,
@@ -94,13 +79,10 @@ class RelationalColors extends ThemeExtension<RelationalColors> {
   }) {
     return RelationalColors(
       action: action ?? this.action,
-      actionHover: actionHover ?? this.actionHover,
       actionSubtle: actionSubtle ?? this.actionSubtle,
       onAction: onAction ?? this.onAction,
       danger: danger ?? this.danger,
       dangerSubtle: dangerSubtle ?? this.dangerSubtle,
-      success: success ?? this.success,
-      successSubtle: successSubtle ?? this.successSubtle,
       surface: surface ?? this.surface,
       surfaceContainer: surfaceContainer ?? this.surfaceContainer,
       surfaceContainerHighest:
@@ -118,13 +100,10 @@ class RelationalColors extends ThemeExtension<RelationalColors> {
     if (other is! RelationalColors) return this;
     return RelationalColors(
       action: Color.lerp(action, other.action, t)!,
-      actionHover: Color.lerp(actionHover, other.actionHover, t)!,
       actionSubtle: Color.lerp(actionSubtle, other.actionSubtle, t)!,
       onAction: Color.lerp(onAction, other.onAction, t)!,
       danger: Color.lerp(danger, other.danger, t)!,
       dangerSubtle: Color.lerp(dangerSubtle, other.dangerSubtle, t)!,
-      success: Color.lerp(success, other.success, t)!,
-      successSubtle: Color.lerp(successSubtle, other.successSubtle, t)!,
       surface: Color.lerp(surface, other.surface, t)!,
       surfaceContainer: Color.lerp(surfaceContainer, other.surfaceContainer, t)!,
       surfaceContainerHighest:

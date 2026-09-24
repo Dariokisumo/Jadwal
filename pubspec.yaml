@@ -1,7 +1,7 @@
 name: jadwal
 description: Offline teacher timetable tracker with live period status and local notifications.
 publish_to: 'none'
-version: 2.9.4+57
+version: 2.9.5+58
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -25,9 +25,6 @@ dependencies:
   # Date/time parsing ("2:00 PM" -> DateTime)
   intl: ^0.19.0
 
-  # Card animations (glow effect on active period)
-  flutter_animate: ^4.5.0
-
   # Runtime notification permission requests (Android 13+)
   permission_handler: ^11.3.1
   flutter_timezone: ^5.1.0
@@ -37,7 +34,6 @@ dependencies:
 
   # Home screen widget support
   home_widget: ^0.7.0
-  flutter_svg: ^2.3.0
 
 
 dev_dependencies:

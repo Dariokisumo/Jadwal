@@ -12,6 +12,7 @@ import '../services/storage_service.dart';
 import '../theme/relational_colors.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/brand_icons.dart';
+import '../widgets/stat_cell.dart';
 import 'home_screen.dart';
 
 /// Pre-populated demo schedule for instant preview and testing.
@@ -725,7 +726,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
               Expanded(
                 child: _buildAssistantChip(
                   name: 'Gemini',
-                  icon: const GeminiBrandIcon(size: 22),
+                  icon: const BrandIcon(icon: BrandIcon.geminiIcon, color: BrandIcon.geminiColor, size: 22),
                   isInstalled: _geminiInstalled,
                   onTap: () => _launchAssistant(
                     name: 'Gemini',
@@ -740,7 +741,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
               Expanded(
                 child: _buildAssistantChip(
                   name: 'ChatGPT',
-                  icon: const ChatGptBrandIcon(size: 22),
+                  icon: const BrandIcon(icon: BrandIcon.chatGptIcon, color: BrandIcon.chatGptColor, size: 22),
                   isInstalled: _chatGptInstalled,
                   onTap: () => _launchAssistant(
                     name: 'ChatGPT',
@@ -755,7 +756,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
               Expanded(
                 child: _buildAssistantChip(
                   name: 'Claude',
-                  icon: const ClaudeBrandIcon(size: 22),
+                  icon: const BrandIcon(icon: BrandIcon.claudeIcon, color: BrandIcon.claudeColor, size: 22),
                   isInstalled: _claudeInstalled,
                   onTap: () => _launchAssistant(
                     name: 'Claude',
@@ -1258,12 +1259,12 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              _buildSummaryStat(
+              StatCell(
                 label: 'Classes',
                 value: '$totalClasses periods',
                 colors: colors,
               ),
-              _buildSummaryStat(
+              StatCell(
                 label: 'Days',
                 value: '${activeDays.length} (${activeDays.join(', ')})',
                 colors: colors,
@@ -1287,42 +1288,6 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
               ],
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryStat({
-    required String label,
-    required String value,
-    required RelationalColors colors,
-  }) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-              color: colors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: 'Geist',
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: colors.textPrimary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
         ],
       ),
     );

@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -45,6 +44,9 @@ tz.TZDateTime _nextWeeklyOccurrence(
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
+
+  // ponytail: single shared channel (was 2× const locals).
+  static const _channel = MethodChannel('com.jadwal/exact_alarm');
 
   static bool _initialized = false;
 
@@ -136,8 +138,7 @@ class NotificationService {
   static Future<bool> hasExactAlarmPermission() async {
     if (!Platform.isAndroid) return true;
     try {
-      const channel = MethodChannel('com.jadwal/exact_alarm');
-      final result = await channel.invokeMethod<bool>('canScheduleExactAlarms');
+      final result = await _channel.invokeMethod<bool>('canScheduleExactAlarms');
       return result ?? false;
     } catch (_) {
       // Fallback: assume not available on older Android versions
@@ -155,8 +156,7 @@ class NotificationService {
       if (await hasExactAlarmPermission()) return true;
 
       // Request via platform channel
-      const channel = MethodChannel('com.jadwal/exact_alarm');
-      final result = await channel.invokeMethod<bool>('requestExactAlarm');
+      final result = await _channel.invokeMethod<bool>('requestExactAlarm');
       if (result == true) return true;
 
       // Fallback: open app settings so user can find Alarms & reminders
@@ -231,11 +231,11 @@ class NotificationService {
     // Best-effort: try the direct deep-link first. On OnePlus/OxygenOS
     // this is the "Battery > App battery management > Jadwal" page.
     try {
-      const intent = AndroidIntent(
-        action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
-      );
-      await intent.launch();
-      return;
+      final ok = await _channel.invokeMethod<bool>('openSystemSettings', {
+        'action':
+            'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
+      });
+      if (ok == true) return;
     } catch (e) {
       debugPrint(
           'NotificationService: deep-link to battery optimization failed, falling back: $e');

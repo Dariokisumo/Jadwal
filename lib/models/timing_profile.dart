@@ -28,21 +28,32 @@ class TimingProfile {
         'slots': slots.map((k, v) => MapEntry(k.toString(), v)),
       };
 
-  /// Parses strict or relaxed "h:mm a" (e.g. "8:30 AM", "12:10 PM") into minutes from midnight (0..1439).
+  /// Parses 12-hour ("2:00 PM", "2:00PM") and 24-hour ("14:00") into minutes
+  /// from midnight (0..1439). Canonical parser shared with [JsonValidator].
+  /// Returns null if unrecognized. Strict: 12h hour 1-12, 24h hour 0-23, min 0-59.
   static int? parseTimeToMinutes(String timeStr) {
-    final regex = RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)$', caseSensitive: false);
-    final match = regex.firstMatch(timeStr.trim());
-    if (match == null) return null;
-    var hour = int.tryParse(match.group(1)!);
-    final min = int.tryParse(match.group(2)!);
-    final isPm = match.group(3)!.toUpperCase() == 'PM';
-    if (hour == null || min == null) return null;
-    if (hour == 12) {
-      hour = isPm ? 12 : 0;
-    } else if (isPm) {
-      hour += 12;
+    final s = timeStr.trim();
+    if (s.isEmpty) return null;
+    final m12 =
+        RegExp(r'^0?(\d{1,2}):(\d{2})\s*(AM|PM)$', caseSensitive: false)
+            .firstMatch(s);
+    if (m12 != null) {
+      final hour = int.tryParse(m12.group(1)!);
+      final min = int.tryParse(m12.group(2)!);
+      if (hour == null || hour < 1 || hour > 12) return null;
+      if (min == null || min < 0 || min > 59) return null;
+      final isPm = m12.group(3)!.toUpperCase() == 'PM';
+      return (hour % 12 + (isPm ? 12 : 0)) * 60 + min;
     }
-    return hour * 60 + min;
+    final m24 = RegExp(r'^0?(\d{1,2}):(\d{2})$').firstMatch(s);
+    if (m24 != null) {
+      final h24 = int.tryParse(m24.group(1)!);
+      final min = int.tryParse(m24.group(2)!);
+      if (h24 == null || h24 < 0 || h24 > 23) return null;
+      if (min == null || min < 0 || min > 59) return null;
+      return h24 * 60 + min;
+    }
+    return null;
   }
 
   /// Converts minutes from midnight (0..1439) into formatted "h:mm a" string.

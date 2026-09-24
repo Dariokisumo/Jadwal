@@ -103,9 +103,10 @@ class DayChip extends StatelessWidget {
               if (isToday)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: CustomPaint(
-                    size: const Size(8, 5),
-                    painter: TrianglePainter(color: colors.action),
+                  child: Icon(
+                    Icons.arrow_drop_up,
+                    size: 8,
+                    color: colors.action,
                   ),
                 )
               else
@@ -118,24 +119,3 @@ class DayChip extends StatelessWidget {
   }
 }
 
-class TrianglePainter extends CustomPainter {
-  final Color color;
-
-  const TrianglePainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    final path = Path()
-      ..moveTo(size.width / 2, size.height)
-      ..lineTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant TrianglePainter old) => old.color != color;
-}
