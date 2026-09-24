@@ -59,7 +59,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Set<int> _overridesFor(String dayKey) =>
       _finishedOverridesByDay[dayKey] ?? {};
 
-
   static const List<String> _allDaysInOrder = [
     'saturday',
     'sunday',
@@ -76,6 +75,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   int get _dayIndex => _allDaysInOrder.indexOf(_selectedDayKey);
 
+  List<DateTime> get _currentWeekDates {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final start = DateTime(
+      today.year,
+      today.month,
+      today.day - ((today.weekday + 1) % 7),
+    );
+    return List.generate(
+      _allDaysInOrder.length,
+      (index) => DateTime(start.year, start.month, start.day + index),
+    );
+  }
+
+  String _weekRangeLabel(List<DateTime> dates) {
+    final localizations = MaterialLocalizations.of(context);
+    final start = dates.first;
+    final end = dates.last;
+
+    if (start.year == end.year && start.month == end.month) {
+      return '${start.day}–${end.day} ${localizations.formatMonthYear(end)}';
+    }
+    if (start.year == end.year) {
+      return '${localizations.formatShortMonthDay(start)} – ${localizations.formatShortMonthDay(end)}, ${end.year}';
+    }
+    return '${localizations.formatCompactDate(start)} – ${localizations.formatCompactDate(end)}';
+  }
+
   Period? get _currentActivePeriod {
     if (!_isToday) return null;
     for (final p in _selectedDayPeriods) {
@@ -87,9 +113,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Period> get _todayPeriods {
     final todayKey = _todayKey;
     final data = _timetable[todayKey] as List? ?? [];
-    return data
-        .map((e) => Period.fromJson(e as Map<String, dynamic>))
-        .toList()
+    return data.map((e) => Period.fromJson(e as Map<String, dynamic>)).toList()
       ..sort((a, b) => a.periodNumber.compareTo(b.periodNumber));
   }
 
@@ -116,9 +140,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         todayPeriods.where((p) => p.status == PeriodStatus.finished).length;
     if (finishedCount == todayPeriods.length) return 'All done for today';
 
-    final nextList = todayPeriods
-        .where((p) => p.status == PeriodStatus.upcoming)
-        .toList();
+    final nextList =
+        todayPeriods.where((p) => p.status == PeriodStatus.upcoming).toList();
     if (nextList.isNotEmpty) {
       final n = nextList.first;
       final mins = n.minutesUntilStart;
@@ -158,7 +181,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _handleImportedProfile(profile);
       }
     });
-    _timetableDeepLinkSub = DeepLinkService.onTimetableReceived.listen((timetable) {
+    _timetableDeepLinkSub =
+        DeepLinkService.onTimetableReceived.listen((timetable) {
       if (mounted) {
         _handleIncomingTimetableFile(timetable);
       }
@@ -184,6 +208,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      setState(() {});
       _checkClipboardForProfile();
       DeepLinkService.checkInitialLink();
     }
@@ -288,7 +313,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(
               'Cancel',
-              style: TextStyle(fontFamily: 'Geist', color: colors.textSecondary),
+              style:
+                  TextStyle(fontFamily: 'Geist', color: colors.textSecondary),
             ),
           ),
           FilledButton(
@@ -357,7 +383,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       await WidgetDataService.updateWidget();
     } catch (e, stack) {
-      developer.log('Widget update failed', name: 'HomeScreen', error: e, stackTrace: stack);
+      developer.log('Widget update failed',
+          name: 'HomeScreen', error: e, stackTrace: stack);
     }
   }
 
@@ -367,7 +394,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _showMandatoryPermissionDialog();
     } else {
       // Check exact alarm permission too — request it to trigger system dialog
-      final exactAlarmOk = await NotificationService.requestExactAlarmPermission();
+      final exactAlarmOk =
+          await NotificationService.requestExactAlarmPermission();
       if (!exactAlarmOk && mounted) {
         _showExactAlarmPermissionDialog();
       }
@@ -379,7 +407,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Notifications Required', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
+        title: const Text('Notifications Required',
+            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
         content: const Text(
           'Jadwal needs notification permissions to remind you about your classes. '
           'Please enable notifications in system settings to continue.',
@@ -388,7 +417,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         actions: [
           TextButton(
             onPressed: () => openAppSettings(),
-            child: const Text('Open Settings', style: TextStyle(fontFamily: 'Geist')),
+            child: const Text('Open Settings',
+                style: TextStyle(fontFamily: 'Geist')),
           ),
           TextButton(
             onPressed: () async {
@@ -403,7 +433,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 }
               }
             },
-            child: const Text('I\'ve Enabled It', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
+            child: const Text('I\'ve Enabled It',
+                style: TextStyle(
+                    fontFamily: 'Geist', fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -415,7 +447,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Exact Alarm Permission', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
+        title: const Text('Exact Alarm Permission',
+            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
         content: const Text(
           'Jadwal needs "Alarms & reminders" permission to send notifications at the exact time before each class.\n\n'
           'Please enable "Alarms & reminders" in the settings screen, then come back and tap "I\'ve Enabled It".',
@@ -434,11 +467,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 await openAppSettings();
               }
             },
-            child: const Text('Open Settings', style: TextStyle(fontFamily: 'Geist')),
+            child: const Text('Open Settings',
+                style: TextStyle(fontFamily: 'Geist')),
           ),
           TextButton(
             onPressed: () async {
-              final granted = await NotificationService.hasExactAlarmPermission();
+              final granted =
+                  await NotificationService.hasExactAlarmPermission();
               if (granted) {
                 if (mounted) Navigator.pop(ctx);
                 _scheduleNotificationsForToday();
@@ -452,7 +487,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 }
               }
             },
-            child: const Text('I\'ve Enabled It', style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
+            child: const Text('I\'ve Enabled It',
+                style: TextStyle(
+                    fontFamily: 'Geist', fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -470,7 +507,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
       }
     } catch (e, st) {
-      developer.log('Permission check failed', name: 'HomeScreen', error: e, stackTrace: st);
+      developer.log('Permission check failed',
+          name: 'HomeScreen', error: e, stackTrace: st);
     }
   }
 
@@ -532,7 +570,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _loadPeriodsForDay(dayKey);
     if (newIndex >= 0) {
       final diff = (newIndex - currentIndex).abs();
-      if (diff <= 1) {
+      if (diff <= 1 && !MediaQuery.disableAnimationsOf(context)) {
         // Adjacent day — smooth slide feels natural.
         _pageController.animateToPage(
           newIndex,
@@ -584,7 +622,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await StorageService.clear();
       await NotificationService.cancelAll();
     } catch (e, st) {
-      developer.log('Reimport cleanup failed', name: 'HomeScreen', error: e, stackTrace: st);
+      developer.log('Reimport cleanup failed',
+          name: 'HomeScreen', error: e, stackTrace: st);
     }
 
     if (!mounted) return;
@@ -622,9 +661,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
-    final teacher = _teacherName.trim().isEmpty ? 'Jadwal' : _teacherName.trim();
+    final teacher =
+        _teacherName.trim().isEmpty ? 'Jadwal' : _teacherName.trim();
     final rawSanitized = teacher.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
-    final sanitizedName = rawSanitized.replaceAll('_', '').isEmpty ? 'Jadwal' : rawSanitized;
+    final sanitizedName =
+        rawSanitized.replaceAll('_', '').isEmpty ? 'Jadwal' : rawSanitized;
     final fileName = '${sanitizedName}_Timetable.jadwal';
 
     final exportMap = <String, dynamic>{
@@ -702,7 +743,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       library.insert(0, newEntry);
       await StorageService.saveSavedTimetables(library);
       if (mounted) {
-        AppFeedback.showSuccess(context, 'Saved $teacher\'s Timetable to your library.');
+        AppFeedback.showSuccess(
+            context, 'Saved $teacher\'s Timetable to your library.');
       }
     }
   }
@@ -771,6 +813,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     final colors = context.relColors;
+    final weekDates = _currentWeekDates;
 
     final allFinished = _isToday &&
         _selectedDayPeriods.isNotEmpty &&
@@ -890,7 +933,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (_permissionsMissing || _exactAlarmMissing)
             IconButton(
               icon: Icon(Icons.notifications_off_rounded, color: colors.danger),
-              tooltip: _permissionsMissing ? 'Enable Notifications' : 'Fix Alarms & Reminders',
+              tooltip: _permissionsMissing
+                  ? 'Enable Notifications'
+                  : 'Fix Alarms & Reminders',
               onPressed: () async {
                 if (_permissionsMissing) {
                   await openAppSettings();
@@ -907,11 +952,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         child: Column(
           children: [
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm,
+              margin: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
               ),
+              padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
                 color: colors.surface,
                 borderRadius: BorderRadius.circular(14),
@@ -920,19 +964,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   width: 0.5,
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: _allDaysInOrder.map((dayKey) {
-                  return DayChip(
-                    dayKey: dayKey,
-                    label: kDayAbbreviations[dayKey] ?? dayKey.substring(0, 2),
-                    isSelected: dayKey == _selectedDayKey,
-                    isToday: dayKey == _todayKey,
-                    isFriday: dayKey == 'friday',
-                    onTap: () => _onDaySelected(dayKey),
-                    colors: colors,
-                  );
-                }).toList(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _weekRangeLabel(weekDates),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: List.generate(_allDaysInOrder.length, (index) {
+                      final dayKey = _allDaysInOrder[index];
+                      return Expanded(
+                        child: DayChip(
+                          dayKey: dayKey,
+                          label: kDayAbbreviations[dayKey] ??
+                              dayKey.substring(0, 2),
+                          date: weekDates[index],
+                          isSelected: dayKey == _selectedDayKey,
+                          isToday: dayKey == _todayKey,
+                          isFriday: dayKey == 'friday',
+                          onTap: () => _onDaySelected(dayKey),
+                          colors: colors,
+                        ),
+                      );
+                    }),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -965,7 +1028,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           return _emptyState(
             icon: Icons.event_busy_outlined,
             title: 'No classes',
-            subtitle: 'No periods scheduled for ${kDayLabels[dayKey] ?? dayKey}.',
+            subtitle:
+                'No periods scheduled for ${kDayLabels[dayKey] ?? dayKey}.',
             colors: colors,
           );
         }
@@ -1026,7 +1090,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             return Column(
               children: [
                 PeriodCard(
-                  key: ValueKey('period-${dayPeriods[i].periodNumber}-${_overridesFor(dayKey)}'),
+                  key: ValueKey(
+                      'period-${dayPeriods[i].periodNumber}-${_overridesFor(dayKey)}'),
                   period: dayPeriods[i],
                   showStatus: dayIsToday && !_showFinishedOverride,
                   isVeryNext: dayIsToday &&
@@ -1034,7 +1099,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       dayPeriods
                           .take(i)
                           .every((p) => p.status != PeriodStatus.upcoming),
-                  isManuallyFinished: _isPeriodManuallyFinished(dayPeriods[i].periodNumber, dayKey),
+                  isManuallyFinished: _isPeriodManuallyFinished(
+                      dayPeriods[i].periodNumber, dayKey),
                   onToggleFinished: dayIsToday
                       ? () => _togglePeriodFinished(dayPeriods[i].periodNumber)
                       : null,
@@ -1144,9 +1210,3 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 }
-
-
-
-
-
-
