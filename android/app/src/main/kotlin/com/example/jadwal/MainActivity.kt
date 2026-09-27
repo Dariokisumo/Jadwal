@@ -203,12 +203,14 @@ class MainActivity: FlutterActivity() {
                     val fileName = call.argument<String>("fileName") ?: "timetable.jadwal"
                     val title = call.argument<String>("title") ?: "Share Timetable"
                     val mimeType = call.argument<String>("mimeType") ?: "*/*"
+                    val text = call.argument<String>("text")
+                    val targetPackage = call.argument<String>("package")
                     if (content != null) {
                         result.success(shareFileContent(fileName, content, title, mimeType))
                     } else {
                         val filePath = call.argument<String>("filePath")
                         if (filePath != null) {
-                            result.success(shareFile(filePath, title, mimeType))
+                            result.success(shareFile(filePath, title, mimeType, text, targetPackage))
                         } else {
                             result.error("INVALID_ARGUMENT", "content or filePath required", null)
                         }
@@ -304,7 +306,13 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    private fun shareFile(filePath: String, title: String, mimeType: String): Boolean {
+    private fun shareFile(
+        filePath: String,
+        title: String,
+        mimeType: String,
+        text: String? = null,
+        targetPackage: String? = null
+    ): Boolean {
         return try {
             val file = File(filePath)
             if (!file.exists()) return false
@@ -312,10 +320,25 @@ class MainActivity: FlutterActivity() {
             val sendIntent = Intent(Intent.ACTION_SEND).apply {
                 type = mimeType
                 putExtra(Intent.EXTRA_STREAM, uri)
+                if (!text.isNullOrBlank()) {
+                    putExtra(Intent.EXTRA_TEXT, text)
+                }
                 putExtra(Intent.EXTRA_TITLE, title)
                 putExtra(Intent.EXTRA_SUBJECT, title)
                 clipData = ClipData.newRawUri(title, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                if (!targetPackage.isNullOrBlank()) {
+                    setPackage(targetPackage)
+                }
+            }
+            if (!targetPackage.isNullOrBlank()) {
+                try {
+                    sendIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(sendIntent)
+                    return true
+                } catch (_: Exception) {
+                    sendIntent.setPackage(null)
+                }
             }
             val shareIntent = Intent.createChooser(sendIntent, title).apply {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

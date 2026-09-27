@@ -10,6 +10,7 @@ class StatCell extends StatelessWidget {
   final double labelSize;
   final FontWeight labelWeight;
   final bool uppercase;
+  final int maxLines;
 
   const StatCell({
     super.key,
@@ -19,6 +20,7 @@ class StatCell extends StatelessWidget {
     this.labelSize = 11,
     this.labelWeight = FontWeight.w600,
     this.uppercase = true,
+    this.maxLines = 1,
   });
 
   @override
@@ -46,7 +48,7 @@ class StatCell extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: colors.textPrimary,
             ),
-            maxLines: 1,
+            maxLines: maxLines,
             overflow: TextOverflow.ellipsis,
           ),
         ],

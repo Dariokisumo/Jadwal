@@ -105,6 +105,29 @@ class DeepLinkService {
     }
   }
 
+  /// Shares an image file to an external app or system share sheet,
+  /// optionally passing a prompt/text and targeting an assistant package.
+  static Future<bool> shareImageFile({
+    required String filePath,
+    String title = 'Share Timetable Photo',
+    String? text,
+    String? packageName,
+  }) async {
+    try {
+      if (!Platform.isAndroid) return false;
+      final success = await _channel.invokeMethod<bool>('shareFile', {
+        'filePath': filePath,
+        'title': title,
+        'mimeType': 'image/*',
+        if (text != null) 'text': text,
+        if (packageName != null) 'package': packageName,
+      });
+      return success ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Saves a timetable file to Android's public Downloads directory.
   /// Returns the saved file path, or null if failed.
   static Future<String?> saveTimetableFileToDownloads({

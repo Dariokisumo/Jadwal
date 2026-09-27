@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -12,6 +13,7 @@ import '../services/storage_service.dart';
 import '../theme/relational_colors.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/brand_icons.dart';
+import '../widgets/photo_alignment_sheet.dart';
 import '../widgets/stat_cell.dart';
 import 'home_screen.dart';
 
@@ -195,14 +197,16 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _detectInstalledApps() async {
-    final gemini = await DeepLinkService.isAppInstalled('com.google.android.apps.bard');
-    final chatgpt = await DeepLinkService.isAppInstalled('com.openai.chatgpt');
-    final claude = await DeepLinkService.isAppInstalled('com.anthropic.claude');
+    final results = await Future.wait([
+      DeepLinkService.isAppInstalled('com.google.android.apps.bard'),
+      DeepLinkService.isAppInstalled('com.openai.chatgpt'),
+      DeepLinkService.isAppInstalled('com.anthropic.claude'),
+    ]);
     if (mounted) {
       setState(() {
-        _geminiInstalled = gemini;
-        _chatGptInstalled = chatgpt;
-        _claudeInstalled = claude;
+        _geminiInstalled = results[0];
+        _chatGptInstalled = results[1];
+        _claudeInstalled = results[2];
       });
     }
   }
@@ -318,6 +322,57 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
     if (mounted) setState(() => _promptCopied = false);
   }
 
+  Future<void> _openPhotoAlignmentFlow() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.single;
+      final bytes = file.bytes ??
+          (file.path != null ? await File(file.path!).readAsBytes() : null);
+
+      if (bytes == null || bytes.isEmpty) {
+        if (mounted) {
+          AppFeedback.showError(context, 'Could not read the selected image.');
+        }
+        return;
+      }
+
+      if (!mounted) return;
+
+      await PhotoAlignmentSheet.show(
+        context,
+        imageBytes: bytes,
+        originalPath: file.path,
+        geminiInstalled: _geminiInstalled,
+        chatGptInstalled: _chatGptInstalled,
+        claudeInstalled: _claudeInstalled,
+        onShared: (assistantName) {
+          if (!mounted) return;
+          setState(() {
+            _promptCopied = true;
+            _recentlyLaunchedAi = assistantName;
+            _stepOneComplete = true;
+            _showStepTwo = true;
+          });
+          AppFeedback.showSuccess(
+            context,
+            'Prompt copied! Photo shared to $assistantName. Paste the JSON response when you return.',
+          );
+          _scrollToStepTwo();
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        AppFeedback.showError(context, 'Failed to pick image: $e');
+      }
+    }
+  }
+
   void _loadSampleTimetable() {
     HapticFeedback.mediumImpact();
     setState(() {
@@ -338,11 +393,16 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
   void _scrollToStepTwo() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOutCubic,
-        );
+        final reduced = MediaQuery.of(context).disableAnimations;
+        if (reduced) {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        } else {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutCubic,
+          );
+        }
       }
     });
   }
@@ -715,11 +775,50 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
     return _stepCard(
       stepNumber: '1',
       title: 'Choose Assistant',
-      body: 'Tap an assistant to copy the prompt and generate your schedule from a photo.',
+      body: 'Align a timetable photo to share directly, or tap an assistant to copy the prompt.',
       colors: colors,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Photo Alignment & Direct AI Share Card
+          _buildPhotoAlignmentCard(colors),
+          const SizedBox(height: AppSpacing.sm),
+          // Direct entry row: Upload File and Try Sample
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickActionTile(
+                  title: 'Upload File',
+                  subtitle: '.jadwal or .json',
+                  icon: Icons.upload_file_rounded,
+                  onTap: _isProcessing ? () {} : _pickAndImportJson,
+                  colors: colors,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _buildQuickActionTile(
+                  title: 'Try Sample',
+                  subtitle: 'Demo schedule',
+                  icon: Icons.play_circle_outline_rounded,
+                  onTap: _loadSampleTimetable,
+                  colors: colors,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'OR LAUNCH ASSISTANT MANUALLY',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.6,
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           // Horizontal 3-card assistant grid
           Row(
             children: [
@@ -803,9 +902,12 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
           ],
 
           const SizedBox(height: AppSpacing.sm),
-          // Quiet secondary actions
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Quiet secondary actions with overflow defense
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
             children: [
               TextButton.icon(
                 onPressed: _copyPrompt,
@@ -821,19 +923,6 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
                     color: _promptCopied ? colors.action : colors.textSecondary,
-                  ),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: _loadSampleTimetable,
-                icon: Icon(Icons.play_circle_outline_rounded, size: 16, color: colors.textSecondary),
-                label: Text(
-                  'Try Sample',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w500,
-                    color: colors.textSecondary,
                   ),
                 ),
               ),
@@ -861,6 +950,173 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
     );
   }
 
+  Widget _buildPhotoAlignmentCard(RelationalColors colors) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.actionSubtle,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: colors.action.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: colors.action,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.crop_rotate_rounded,
+                  color: colors.onAction,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Have a timetable photo?',
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Align edges, rotate upright & share directly to AI',
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _openPhotoAlignmentFlow,
+              icon: const Icon(Icons.photo_library_outlined, size: 18),
+              label: const Text(
+                'Pick & Align Timetable Photo',
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.action,
+                foregroundColor: colors.onAction,
+                minimumSize: const Size.fromHeight(48),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+    required RelationalColors colors,
+  }) {
+    return Semantics(
+      button: true,
+      label: '$title, $subtitle',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.sm + 2,
+              horizontal: AppSpacing.sm + 2,
+            ),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainer,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.borderSubtle),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: colors.actionSubtle,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 17,
+                    color: colors.action,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: colors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 10.5,
+                          color: colors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAssistantChip({
     required String name,
     required Widget icon,
@@ -868,66 +1124,76 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
     required VoidCallback onTap,
     required RelationalColors colors,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainer,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.borderSubtle),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: colors.borderSubtle.withValues(alpha: 0.6)),
-                ),
-                child: SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: Center(child: icon),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                name,
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: colors.textPrimary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isInstalled ? colors.actionSubtle : colors.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  isInstalled ? 'App' : 'Web',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: isInstalled ? colors.action : colors.textSecondary,
+    final availability = isInstalled ? 'App' : 'Web';
+    return Semantics(
+      button: true,
+      label: '$name ($availability)',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainer,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.borderSubtle),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: colors.borderSubtle.withValues(alpha: 0.6)),
+                  ),
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: Center(child: icon),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.sm),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    name,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: colors.textPrimary,
+                    ),
+                    maxLines: 1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isInstalled ? colors.actionSubtle : colors.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      availability,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isInstalled ? colors.action : colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -974,13 +1240,17 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Waiting for timetable data…',
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: colors.textPrimary,
+                      Expanded(
+                        child: Text(
+                          'Waiting for timetable data…',
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: colors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -1112,8 +1382,11 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
               children: [
                 TextButton.icon(
                   onPressed: _isProcessing ? null : _pickAndImportJson,
@@ -1268,6 +1541,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
                 label: 'Days',
                 value: '${activeDays.length} (${activeDays.join(', ')})',
                 colors: colors,
+                maxLines: 2,
               ),
             ],
           ),
@@ -1277,12 +1551,16 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
               children: [
                 Icon(Icons.schedule_rounded, size: 14, color: colors.textSecondary),
                 const SizedBox(width: 6),
-                Text(
-                  'Daily span: $firstStart – $lastEnd',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 12,
-                    color: colors.textSecondary,
+                Expanded(
+                  child: Text(
+                    'Daily span: $firstStart – $lastEnd',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12,
+                      color: colors.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
