@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../constants/spacing.dart';
 import '../constants/timetable_prompt.dart';
@@ -128,7 +128,12 @@ const Map<String, dynamic> kSampleTimetable = {
 };
 
 class SetupScreen extends StatefulWidget {
-  const SetupScreen({super.key});
+  final bool initialShowWelcomeGuide;
+
+  const SetupScreen({
+    super.key,
+    this.initialShowWelcomeGuide = true,
+  });
 
   @override
   State<SetupScreen> createState() => _SetupScreenState();
@@ -146,6 +151,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
   bool _stepOneComplete = false;
   bool _showStepTwo = false;
   bool _showStepThree = false;
+  late bool _showWelcomeGuide;
   bool _isProcessing = false;
   bool _showManualJsonEditor = false;
   String? _errorMessage;
@@ -160,6 +166,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _showWelcomeGuide = widget.initialShowWelcomeGuide;
     WidgetsBinding.instance.addObserver(this);
 
     _jsonController.addListener(() {
@@ -235,6 +242,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
           _hasPastedContent = true;
           _stepOneComplete = true;
           _showStepTwo = true;
+          _showWelcomeGuide = false;
           _errorMessage = null;
         });
         final teacherName = normalized['teacher'] as String? ?? 'Teacher';
@@ -324,18 +332,23 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
 
   Future<void> _openPhotoAlignmentFlow() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        withData: true,
+      // Use image_picker instead of file_picker for image selection.
+      // file_picker's FileType.image silently fails on Android 14+ because
+      // it doesn't use the platform's native Photo Picker. image_picker
+      // handles this correctly and requires zero storage permissions.
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 90,
       );
 
-      if (result == null || result.files.isEmpty) return;
+      if (image == null) return;
 
-      final file = result.files.single;
-      final bytes = file.bytes ??
-          (file.path != null ? await File(file.path!).readAsBytes() : null);
+      final bytes = await image.readAsBytes();
 
-      if (bytes == null || bytes.isEmpty) {
+      if (bytes.isEmpty) {
         if (mounted) {
           AppFeedback.showError(context, 'Could not read the selected image.');
         }
@@ -347,7 +360,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
       await PhotoAlignmentSheet.show(
         context,
         imageBytes: bytes,
-        originalPath: file.path,
+        originalPath: image.path,
         geminiInstalled: _geminiInstalled,
         chatGptInstalled: _chatGptInstalled,
         claudeInstalled: _claudeInstalled,
@@ -381,6 +394,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
       _hasPastedContent = true;
       _stepOneComplete = true;
       _showStepTwo = true;
+      _showWelcomeGuide = false;
       _errorMessage = null;
     });
     AppFeedback.showSuccess(
@@ -556,6 +570,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
           _jsonController.text = const JsonEncoder.withIndent('  ').convert(normalized);
           _hasPastedContent = true;
           _showStepTwo = true;
+          _showWelcomeGuide = false;
           _isProcessing = false;
           _errorMessage = null;
         });
@@ -593,42 +608,205 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: AppSpacing.xs),
-              // App Brand Header
+              if (_showWelcomeGuide && !_showStepTwo && !_showStepThree) ...[
+                _buildWelcomeGuide(colors),
+              ] else ...[
+                const SizedBox(height: AppSpacing.xs),
+                // App Brand Header
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: colors.actionSubtle,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.schedule_rounded,
+                        color: colors.action,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Jadwal',
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: colors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            'Offline timetable tracker',
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 13,
+                              color: colors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!_showStepThree) ...[
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _showWelcomeGuide = true;
+                          });
+                        },
+                        icon: Icon(
+                          Icons.help_outline_rounded,
+                          size: 15,
+                          color: colors.textSecondary,
+                        ),
+                        label: Text(
+                          'Guide',
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 12,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                // Calm Progress Indicator
+                _buildProgressIndicator(colors),
+                const SizedBox(height: AppSpacing.lg),
+                if (!_showStepThree) ...[
+                  _buildStepOne(colors),
+                  if (_showStepTwo) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _buildStepTwo(colors),
+                  ],
+                ] else ...[
+                  _buildCompletedSummary(colors),
+                  const SizedBox(height: AppSpacing.md),
+                  _buildStepThree(colors),
+                ],
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWelcomeGuide(RelationalColors colors) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.xs),
+        // App Brand Header
+        Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: colors.actionSubtle,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: colors.action.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Icon(
+                Icons.schedule_rounded,
+                color: colors.action,
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Jadwal',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Offline timetable tracker',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 13,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // Welcome Guide Card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.base),
+          decoration: BoxDecoration(
+            color: colors.surfaceContainer,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.borderSubtle),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
                       color: colors.actionSubtle,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
-                      Icons.schedule_rounded,
+                      Icons.auto_awesome_rounded,
                       color: colors.action,
-                      size: 24,
+                      size: 18,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: AppSpacing.sm + 2),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Jadwal',
+                          'How Jadwal Works',
                           style: TextStyle(
                             fontFamily: 'Geist',
-                            fontSize: 22,
+                            fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: colors.textPrimary,
                           ),
                         ),
                         Text(
-                          'Offline timetable tracker',
+                          'Three simple steps to offline bell alerts',
                           style: TextStyle(
                             fontFamily: 'Geist',
-                            fontSize: 13,
+                            fontSize: 12,
                             color: colors.textSecondary,
                           ),
                         ),
@@ -637,25 +815,232 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.xl),
-              // Calm Progress Indicator
-              _buildProgressIndicator(colors),
-              const SizedBox(height: AppSpacing.lg),
-              if (!_showStepThree) ...[
-                _buildStepOne(colors),
-                if (_showStepTwo) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  _buildStepTwo(colors),
-                ],
-              ] else ...[
-                _buildCompletedSummary(colors),
-                const SizedBox(height: AppSpacing.md),
-                _buildStepThree(colors),
-              ],
+              const SizedBox(height: AppSpacing.base),
+
+              // Step 1
+              _buildGuideStepItem(
+                number: '1',
+                icon: Icons.camera_alt_outlined,
+                title: 'Snap your paper schedule',
+                description: 'Pick or photograph your printed class timetable.',
+                colors: colors,
+              ),
+              _buildGuideStepDivider(colors),
+
+              // Step 2
+              _buildGuideStepItem(
+                number: '2',
+                icon: Icons.auto_awesome_outlined,
+                title: 'Your AI helper reads it',
+                description: 'Gemini or ChatGPT turns the picture into classes in seconds.',
+                colors: colors,
+              ),
+              _buildGuideStepDivider(colors),
+
+              // Step 3
+              _buildGuideStepItem(
+                number: '3',
+                icon: Icons.notifications_active_outlined,
+                title: 'Get offline bell alerts',
+                description: 'Never miss a class with exact on-time bell reminders.',
+                colors: colors,
+              ),
             ],
           ),
         ),
+        const SizedBox(height: AppSpacing.md),
+
+        // Value Trust Badges
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: colors.surfaceContainer.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: colors.borderSubtle.withValues(alpha: 0.5)),
+          ),
+          child: Wrap(
+            alignment: WrapAlignment.spaceAround,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
+            children: [
+              _buildTrustPill(Icons.cloud_off_rounded, '100% Offline', colors),
+              _buildTrustPill(Icons.bolt_rounded, 'Instant alerts', colors),
+              _buildTrustPill(Icons.shield_outlined, 'No sign-up', colors),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // Primary Action
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () {
+              setState(() => _showWelcomeGuide = false);
+              _openPhotoAlignmentFlow();
+            },
+            icon: const Icon(Icons.add_a_photo_outlined, size: 19),
+            label: const FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'Start with Schedule Photo',
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.action,
+              foregroundColor: colors.onAction,
+              minimumSize: const Size.fromHeight(50),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+
+        // Secondary Action
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              setState(() => _showWelcomeGuide = false);
+              _loadSampleTimetable();
+            },
+            icon: Icon(Icons.play_circle_outline_rounded, size: 19, color: colors.action),
+            label: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'Try Demo Schedule',
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: colors.surfaceContainer,
+              side: BorderSide(color: colors.borderSubtle),
+              minimumSize: const Size.fromHeight(48),
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+
+        // Quiet tertiary action
+        Center(
+          child: TextButton.icon(
+            onPressed: () {
+              setState(() => _showWelcomeGuide = false);
+            },
+            icon: Icon(Icons.tune_rounded, size: 15, color: colors.textSecondary),
+            label: Text(
+              'Step-by-step setup or manual import →',
+              style: TextStyle(
+                fontFamily: 'Geist',
+                fontSize: 12.5,
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGuideStepItem({
+    required String number,
+    required IconData icon,
+    required String title,
+    required String description,
+    required RelationalColors colors,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.actionSubtle,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: colors.action, size: 18),
+        ),
+        const SizedBox(width: AppSpacing.sm + 4),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: colors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: TextStyle(
+                  fontFamily: 'Geist',
+                  fontSize: 12,
+                  color: colors.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGuideStepDivider(RelationalColors colors) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 15, top: 4, bottom: 4),
+      child: Container(
+        width: 2,
+        height: 14,
+        color: colors.borderSubtle,
       ),
+    );
+  }
+
+  Widget _buildTrustPill(IconData icon, String text, RelationalColors colors) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: colors.action),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            fontFamily: 'Geist',
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: colors.textSecondary,
+          ),
+        ),
+      ],
     );
   }
 
@@ -722,7 +1107,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
         Expanded(
           child: Container(
             height: 2,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
+            margin: const EdgeInsets.symmetric(horizontal: 6),
             color: currentStep >= 2 ? colors.action : colors.borderSubtle,
           ),
         ),
@@ -730,19 +1115,22 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
         Expanded(
           child: Container(
             height: 2,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
+            margin: const EdgeInsets.symmetric(horizontal: 6),
             color: currentStep >= 3 ? colors.action : colors.borderSubtle,
           ),
         ),
         _progressCircle(3, currentStep >= 3, currentStep == 3, colors),
-        const SizedBox(width: AppSpacing.md),
-        Text(
-          'Step $currentStep of 3',
-          style: TextStyle(
-            fontFamily: 'Geist',
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: colors.textSecondary,
+        const SizedBox(width: AppSpacing.sm),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            'Step $currentStep of 3',
+            style: TextStyle(
+              fontFamily: 'Geist',
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: colors.textSecondary,
+            ),
           ),
         ),
       ],
