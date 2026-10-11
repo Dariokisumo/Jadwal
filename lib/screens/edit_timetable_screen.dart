@@ -6,7 +6,9 @@ import '../constants/timetable_prompt.dart';
 import '../controllers/edit_timetable_controller.dart';
 import '../services/storage_service.dart';
 import '../theme/relational_colors.dart';
+import '../widgets/app_dialog.dart';
 import '../widgets/app_feedback.dart';
+import '../widgets/app_sheet.dart';
 import '../widgets/period_edit_sheet.dart';
 
 class EditTimetableScreen extends StatefulWidget {
@@ -62,29 +64,14 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
     final available = _controller.periods.where((p) => p != periodNumber).toList();
     final colors = context.relColors;
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        padding: const EdgeInsets.fromLTRB(AppSpacing.base, AppSpacing.md, AppSpacing.base, AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colors.borderSubtle,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
+    AppSheet.show(
+      context,
+      maxHeightFactor: 0.7,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+            const DragHandle(),
             const SizedBox(height: AppSpacing.md),
             Text(
               'Move Period $periodNumber to...',
@@ -140,8 +127,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   void _showPeriodEditSheet(String dayKey, int periodNumber, Map<String, dynamic>? existing) {
@@ -175,32 +161,16 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
     required String confirmLabel,
     required VoidCallback onConfirm,
     String cancelLabel = 'Cancel',
-  }) {
-    final colors = context.relColors;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          title,
-          style: const TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          body,
-          style: const TextStyle(fontFamily: 'Geist'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(cancelLabel, style: const TextStyle(fontFamily: 'Geist')),
-          ),
-          TextButton(
-            onPressed: () => onConfirm(),
-            style: TextButton.styleFrom(foregroundColor: colors.danger),
-            child: Text(confirmLabel, style: const TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+  }) async {
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: title,
+      body: body,
+      confirmLabel: confirmLabel,
+      cancelLabel: cancelLabel,
+      danger: true,
     );
+    if (confirmed == true) onConfirm();
   }
 
   void _showDeleteConfirmation(String dayKey, int periodNumber) {
@@ -209,9 +179,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
       body: 'This will remove Period $periodNumber from ${kDayLabels[dayKey] ?? dayKey}.',
       confirmLabel: 'Delete',
       onConfirm: () {
-        Navigator.of(context)
-          ..pop()
-          ..pop();
+        Navigator.of(context).pop();
         _controller.deletePeriod(dayKey, periodNumber);
       },
     );
@@ -373,7 +341,6 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
       body: 'This will remove Period $periodNumber and all its scheduled classes across all days. Subsequent periods will be shifted down.',
       confirmLabel: 'Delete Column',
       onConfirm: () {
-        Navigator.of(context).pop();
         HapticFeedback.mediumImpact();
         _controller.removePeriodColumn(periodNumber);
       },
@@ -412,8 +379,8 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
       onLongPress: () => _onCellLongPress(dayKey, periodNumber),
       child: Container(
         width: 70,
-        height: 52,
         margin: const EdgeInsets.symmetric(horizontal: 2),
+        constraints: const BoxConstraints(minHeight: 52),
         decoration: BoxDecoration(
           color: isEmpty
               ? colors.surfaceContainerHighest
@@ -543,9 +510,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
       confirmLabel: 'Discard',
       cancelLabel: 'Keep Editing',
       onConfirm: () {
-        Navigator.of(context)
-          ..pop()
-          ..pop();
+        Navigator.of(context).pop();
       },
     );
   }

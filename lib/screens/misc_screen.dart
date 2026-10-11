@@ -150,13 +150,17 @@ class _MiscScreenState extends State<MiscScreen> {
                         width: 1.5,
                       ),
                     ),
-                    child: Text(
-                      '$tempCount',
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: colors.action,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '$tempCount',
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: colors.action,
+                        ),
                       ),
                     ),
                   ),

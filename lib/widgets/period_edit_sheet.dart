@@ -153,10 +153,11 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         ),
         padding: const EdgeInsets.fromLTRB(AppSpacing.base, AppSpacing.md, AppSpacing.base, AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Center(
               child: Container(
                 width: 36,
@@ -259,6 +260,7 @@ class _PeriodEditSheetState extends State<PeriodEditSheet> {
               ),
             ),
           ],
+          ),
         ),
       ),
     );

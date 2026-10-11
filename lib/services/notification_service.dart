@@ -273,6 +273,8 @@ class NotificationService {
       subText: 'Jadwal',
       category: AndroidNotificationCategory.reminder,
       onlyAlertOnce: true,
+      // ponytail: single live reminder — fires 5min early, auto-clears ~5min into period.
+      timeoutAfter: 10 * 60 * 1000,
     );
     const iosDetails = DarwinNotificationDetails();
     const details = NotificationDetails(android: androidDetails, iOS: iosDetails);

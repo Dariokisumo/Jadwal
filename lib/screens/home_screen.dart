@@ -19,10 +19,11 @@ import '../services/update_service.dart';
 import '../models/saved_timetable.dart';
 import '../services/widget_data_service.dart';
 import '../theme/relational_colors.dart';
+import '../widgets/app_dialog.dart';
 import '../widgets/app_feedback.dart';
+import '../widgets/home/week_strip.dart';
 import '../widgets/break_indicator.dart';
 import '../widgets/clipboard_import_sheet.dart';
-import '../widgets/day_chip.dart';
 import '../widgets/period_card.dart';
 import '../widgets/profile_import_dialog.dart';
 import '../widgets/theme_bottom_sheet.dart';
@@ -45,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Period> _selectedDayPeriods = [];
   String _selectedDayKey = '';
   bool _loading = true;
+  String? _loadError;
   Timer? _refreshTimer;
   StreamSubscription<TimingProfile>? _deepLinkSub;
   StreamSubscription<Map<String, dynamic>>? _timetableDeepLinkSub;
@@ -286,47 +288,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _confirmAndImportTimetableJson(Map<String, dynamic> data) async {
-    final colors = context.relColors;
     final teacher = data['teacher_name'] as String? ?? 'Teacher';
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: colors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text(
-          'Import Timetable for $teacher?',
-          style: TextStyle(
-            fontFamily: 'Geist',
-            fontWeight: FontWeight.w700,
-            color: colors.textPrimary,
-          ),
-        ),
-        content: Text(
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: 'Import Timetable for $teacher?',
+      body:
           'This will replace your current timetable with the timetable copied from your clipboard.',
-          style: TextStyle(
-            fontFamily: 'Geist',
-            color: colors.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'Cancel',
-              style:
-                  TextStyle(fontFamily: 'Geist', color: colors.textSecondary),
-            ),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(backgroundColor: colors.action),
-            child: Text(
-              'Import Timetable',
-              style: TextStyle(fontFamily: 'Geist', color: colors.onAction),
-            ),
-          ),
-        ],
-      ),
+      confirmLabel: 'Import Timetable',
+      danger: false,
     );
 
     if (confirmed == true && mounted) {
@@ -354,25 +323,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _loadTimetable() async {
-    final data = await StorageService.loadTimetable();
+    try {
+      final data = await StorageService.loadTimetable();
 
-    if (data == null) {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const SetupScreen()),
-        );
+      if (data == null) {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const SetupScreen()),
+          );
+        }
+        return;
       }
-      return;
-    }
 
-    final teacher = data['teacher']?.toString() ?? '';
-    final timetable = data['timetable'] as Map<String, dynamic>;
+      final teacher = data['teacher']?.toString() ?? '';
+      final timetable = data['timetable'] as Map<String, dynamic>;
 
-    setState(() {
-      _teacherName = teacher;
-      _timetable = timetable;
-      _loading = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        _teacherName = teacher;
+        _timetable = timetable;
+        _loading = false;
+        _loadError = null;
+      });
 
     _loadPeriodsForDay(_selectedDayKey);
     _scheduleNotificationsForToday();
@@ -385,6 +357,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } catch (e, stack) {
       developer.log('Widget update failed',
           name: 'HomeScreen', error: e, stackTrace: stack);
+    }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadError = 'Could not load timetable. Please retry.';
+      });
     }
   }
 
@@ -594,26 +573,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _reimport() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Re-import timetable?'),
-        content: const Text(
-          'This will replace your current timetable. You will need to '
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: 'Re-import timetable?',
+      body: 'This will replace your current timetable. You will need to '
           'paste or upload a new JSON file.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Replace'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Replace',
+      danger: true,
     );
 
     if (confirmed != true) return;
@@ -777,6 +743,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
+    if (_loadError != null) {
+      final colors = context.relColors;
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _loadError!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () {
+                      setState(() {
+                        _loading = true;
+                        _loadError = null;
+                      });
+                      _loadTimetable();
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colors.action,
+                      foregroundColor: colors.onAction,
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final colors = context.relColors;
     final weekDates = _currentWeekDates;
 
@@ -809,6 +816,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Expanded(
                   child: Text(
                     _teacherName.isEmpty ? 'Today' : _teacherName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Geist',
                       fontSize: 17,
@@ -822,6 +831,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Text(
               _appBarSubtitle,
               key: ValueKey(_appBarSubtitle),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: 'Geist',
                 fontSize: 13,
@@ -908,72 +919,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              margin: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-              ),
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: colors.surface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: colors.borderSubtle,
-                  width: 0.5,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    _weekRangeLabel(weekDates),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final gap = AppSpacing.xs;
-                      final textScale =
-                          MediaQuery.textScalerOf(context).scale(1);
-                      final columns =
-                          constraints.maxWidth < 320 || textScale > 1.2
-                              ? 4
-                              : _allDaysInOrder.length;
-                      final chipWidth =
-                          (constraints.maxWidth - gap * (columns - 1)) /
-                              columns;
-
-                      return Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: gap,
-                        runSpacing: gap,
-                        children:
-                            List.generate(_allDaysInOrder.length, (index) {
-                          final dayKey = _allDaysInOrder[index];
-                          return SizedBox(
-                            width: chipWidth,
-                            child: DayChip(
-                              dayKey: dayKey,
-                              label: kDayAbbreviations[dayKey] ??
-                                  dayKey.substring(0, 2),
-                              date: weekDates[index],
-                              isSelected: dayKey == _selectedDayKey,
-                              isToday: dayKey == _todayKey,
-                              isFriday: dayKey == 'friday',
-                              onTap: () => _onDaySelected(dayKey),
-                              colors: colors,
-                            ),
-                          );
-                        }),
-                      );
-                    },
-                  ),
-                ],
-              ),
+            WeekStrip(
+              daysInOrder: _allDaysInOrder,
+              weekDates: weekDates,
+              weekRangeLabel: _weekRangeLabel(weekDates),
+              selectedDayKey: _selectedDayKey,
+              todayKey: _todayKey,
+              onDaySelected: _onDaySelected,
             ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(

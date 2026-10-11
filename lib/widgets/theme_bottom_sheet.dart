@@ -14,12 +14,14 @@ class ThemeBottomSheet extends StatelessWidget {
     final currentMode = themeNotifier.value;
     final currentAccent = accentNotifier.value;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           Center(
             child: Container(
               width: 40,
@@ -142,7 +144,7 @@ class ThemeBottomSheet extends StatelessWidget {
                                       Icons.check_rounded,
                                       size: 14,
                                       color: color.computeLuminance() > 0.4
-                                          ? const Color(0xFF1A1612)
+                                          ? Primitives.textLight
                                           : Colors.white,
                                     )
                                   : null,
@@ -169,7 +171,9 @@ class ThemeBottomSheet extends StatelessWidget {
               }).toList(),
             ),
           ),
-        ],
+          ],
+          ),
+        ),
       ),
     );
   }
@@ -225,13 +229,19 @@ class _ModeChip extends StatelessWidget {
                 color: isSelected ? colors.onAction : colors.textSecondary,
               ),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? colors.onAction : colors.textPrimary,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? colors.onAction : colors.textPrimary,
+                    ),
+                  ),
                 ),
               ),
             ],

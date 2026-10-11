@@ -14,6 +14,7 @@ import '../theme/relational_colors.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/brand_icons.dart';
 import '../widgets/photo_alignment_sheet.dart';
+import '../widgets/setup/trust_pill.dart';
 import '../widgets/stat_cell.dart';
 import 'home_screen.dart';
 
@@ -865,9 +866,9 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.xs,
             children: [
-              _buildTrustPill(Icons.cloud_off_rounded, '100% Offline', colors),
-              _buildTrustPill(Icons.bolt_rounded, 'Instant alerts', colors),
-              _buildTrustPill(Icons.shield_outlined, 'No sign-up', colors),
+              _buildTrustPill(Icons.cloud_off_rounded, '100% Offline'),
+              _buildTrustPill(Icons.bolt_rounded, 'Instant alerts'),
+              _buildTrustPill(Icons.shield_outlined, 'No sign-up'),
             ],
           ),
         ),
@@ -1025,23 +1026,8 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildTrustPill(IconData icon, String text, RelationalColors colors) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 13, color: colors.action),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: TextStyle(
-            fontFamily: 'Geist',
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: colors.textSecondary,
-          ),
-        ),
-      ],
-    );
+  Widget _buildTrustPill(IconData icon, String text) {
+    return TrustPill(icon: icon, text: text);
   }
 
   Widget _buildCompletedSummary(RelationalColors colors) {
@@ -1400,12 +1386,16 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
             child: FilledButton.icon(
               onPressed: _openPhotoAlignmentFlow,
               icon: const Icon(Icons.photo_library_outlined, size: 18),
-              label: const Text(
-                'Pick & Align Timetable Photo',
-                style: TextStyle(
-                  fontFamily: 'Geist',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'Pick & Align Timetable Photo',
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontFamily: 'Geist',
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               style: FilledButton.styleFrom(

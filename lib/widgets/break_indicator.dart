@@ -41,37 +41,46 @@ class BreakIndicator extends StatelessWidget {
                     : colors.borderSubtle.withValues(alpha: 0.6),
               ),
             ),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: pillBg,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: pillBorder,
-                  width: 0.8,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isLunch ? Icons.restaurant_outlined : Icons.coffee_rounded,
-                    size: 12,
-                    color: contentColor,
+            Flexible(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: pillBg,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: pillBorder,
+                    width: 0.8,
                   ),
-                  const SizedBox(width: 5),
-                  Text(
-                    isNow ? 'NOW • $label' : label,
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 11,
-                      fontWeight: isNow ? FontWeight.w600 : FontWeight.w500,
-                      letterSpacing: 0.2,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isLunch ? Icons.restaurant_outlined : Icons.coffee_rounded,
+                      size: 12,
                       color: contentColor,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          isNow ? 'NOW • $label' : label,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: 'Geist',
+                            fontSize: 11,
+                            fontWeight:
+                                isNow ? FontWeight.w600 : FontWeight.w500,
+                            letterSpacing: 0.2,
+                            color: contentColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             Expanded(

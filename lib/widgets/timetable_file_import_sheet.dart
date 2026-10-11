@@ -200,12 +200,16 @@ class TimetableFileImportSheet extends StatelessWidget {
                       children: [
                         Icon(Icons.schedule_rounded, size: 14, color: colors.textSecondary),
                         const SizedBox(width: 6),
-                        Text(
-                          'Daily span: $firstStart – $lastEnd',
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 12,
-                            color: colors.textSecondary,
+                        Expanded(
+                          child: Text(
+                            'Daily span: $firstStart – $lastEnd',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Geist',
+                              fontSize: 12,
+                              color: colors.textSecondary,
+                            ),
                           ),
                         ),
                       ],
@@ -225,12 +229,16 @@ class TimetableFileImportSheet extends StatelessWidget {
                   Navigator.pop(context, TimetableImportAction.activate);
                 },
                 icon: const Icon(Icons.check_circle_rounded, size: 18),
-                label: const Text(
-                  'Activate Timetable Now',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Activate Timetable Now',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 style: FilledButton.styleFrom(
@@ -251,12 +259,16 @@ class TimetableFileImportSheet extends StatelessWidget {
                   Navigator.pop(context, TimetableImportAction.saveOnly);
                 },
                 icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-                label: const Text(
-                  'Save to Library Only',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Save to Library Only',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 style: OutlinedButton.styleFrom(

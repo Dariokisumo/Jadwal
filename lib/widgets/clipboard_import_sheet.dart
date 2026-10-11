@@ -66,10 +66,11 @@ class ClipboardImportSheet extends StatelessWidget {
           AppSpacing.base,
           AppSpacing.xl,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // Drag handle
             Center(
               child: Container(
@@ -173,6 +174,8 @@ class ClipboardImportSheet extends StatelessWidget {
                           const SizedBox(height: 3),
                           Text(
                             details,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontFamily: 'Geist',
                               fontSize: 12.5,
@@ -199,12 +202,16 @@ class ClipboardImportSheet extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text(
-                confirmLabel,
-                style: const TextStyle(
-                  fontFamily: 'Geist',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14.5,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  confirmLabel,
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontFamily: 'Geist',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14.5,
+                  ),
                 ),
               ),
             ),
@@ -225,6 +232,7 @@ class ClipboardImportSheet extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );

@@ -7,6 +7,9 @@ import urllib.request
 import urllib.error
 
 def get_token():
+    env_token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if env_token:
+        return env_token
     res = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True, check=True)
     url = res.stdout.strip()
     # format: https://<token>@github.com/...
@@ -14,28 +17,28 @@ def get_token():
         part = url.split("://", 1)[1]
         token = part.split("@", 1)[0]
         return token
-    raise ValueError("Could not extract token from git remote origin")
+    raise ValueError("Could not extract token from GITHUB_TOKEN env or git remote origin")
 
 def main():
     token = get_token()
     owner = "Dariokisumo"
     repo = "Jadwal"
-    tag = "v2.10.3"
-    release_name = "v2.10.3 — Plain-Language Onboarding Guide & Streamlined Photo Setup"
-    release_body = """## What's new in v2.10.3
+    tag = "v2.10.4"
+    release_name = "v2.10.4 — Period Reminder Auto-Dismissal & Modular Relational UI"
+    release_body = """## What's new in v2.10.4
 
-### 🌟 Plain-Language Onboarding Welcome Guide
-- **3-Step Visual Cards**: Introduced an intuitive visual overview of how Jadwal works in simple, jargon-free language:
-  1. *Snap your paper schedule* (no typing needed)
-  2. *Your AI helper reads it* (Gemini, ChatGPT, or Claude handles extraction)
-  3. *Get offline bell alerts* (notifies before every period starts)
-- **Key Trust Badges**: Clear visual assurance on first launch: **100% Offline**, **Instant bell alerts**, and **No sign-up or accounts required**.
-- **Streamlined Actions**: Direct primary button to take or align a schedule photo, an instant one-tap **Try Demo Schedule** button, and a quiet path to manual file import / step-by-step setup.
-- **Bi-directional Navigation**: Easy "Guide" return button in the setup step header allowing teachers to flip back to the visual onboarding guide at any time.
+### ⏰ Notification Timing & Auto-Dismissal
+- **Period Reminder Auto-Clear**: Class reminder notifications scheduled 5 minutes before class now automatically clear 5 minutes after class begins (`timeoutAfter: 10min`), preventing stale notifications from cluttering the status bar or lock screen.
+- **Single Live Reminder**: Preserves `onlyAlertOnce: true` and high-priority reminder channels for subtle, non-intrusive alerts.
 
-### ⚡ Build & Platform Stability
-- **AndroidX Dependency Resolution**: Pinned `androidx.core` and `androidx.activity` versions across subprojects to ensure reliable, zero-warning builds against Android Gradle Plugin 8.7.0 and Gradle 8.14.2.
-- **Accessibility & Overflow Hardening**: Verified zero overflow on 320dp narrow screens and high font scaling factors (up to 1.4×).
+### 🎨 Modular Relational UI Refactoring
+- **WeekStrip Component**: Extracted calendar week selector into a dedicated, responsive widget (`WeekStrip`) supporting narrow screen constraints.
+- **Unified AppDialog & AppSheet**: Standardized confirmation modals and bottom sheets (`AppDialog`, `AppSheet`) across all screens for consistent surface hierarchy and elevation.
+- **Modularized Screen Subcomponents**: Cleanly decoupled `HomeScreen`, `SetupScreen`, and `PeriodTimingsScreen` into composable subcomponents for faster build iterations and maintainability.
+
+### ⚡ Build System & Android Stability
+- **Gradle VFS Watching & Incremental Build**: Enabled `org.gradle.vfs.watch=true` and `kotlin.incremental=true` in `gradle.properties` for lightning-fast incremental builds.
+- **Verified Dual ABI Releases**: Independent compilation and cryptographic signing for both 64-bit and 32-bit release APKs.
 
 ---
 
@@ -43,8 +46,8 @@ def main():
 
 | File | Architecture | Target Devices | Size | SHA256 |
 |---|---|---|---|---|
-| `jadwal-v2.10.3-62-release.apk` | **arm64-v8a** (64-bit) | Modern Android phones & tablets (recommended) | ~24.2 MB | `a857cc69a17d4b3ac49dcd3e20dd9cdfe185c91ace5836a55793b1807366fd9f` |
-| `jadwal-v2.10.3-62-arm32-release.apk` | **armeabi-v7a** (32-bit) | Older & budget 32-bit Android devices | ~21.8 MB | `ac234f18489389bc226e8ea1a1d334eab3a5ffd328c924e037c567670710c680` |
+| `jadwal-v2.10.4-63-release.apk` | **arm64-v8a** (64-bit) | Modern Android phones & tablets (recommended) | 24.21 MB | `55d8b6721c4ff77067b49f26073a2593ddda72126f3c1c5dbd8f8aac8c1ad882` |
+| `jadwal-v2.10.4-63-arm32-release.apk` | **armeabi-v7a** (32-bit) | Older & budget 32-bit Android devices | 21.84 MB | `a1fb1c6d8a65797b6e6e06939cd1b87ee821e96ef5a53431aec4411cc5c6b49f` |
 """
 
     headers = {
@@ -85,8 +88,8 @@ def main():
 
     # Assets to upload
     assets = [
-        ("Apk files/jadwal-v2.10.3-62-release.apk", "jadwal-v2.10.3-62-release.apk"),
-        ("Apk files/apk32/jadwal-v2.10.3-62-release.apk", "jadwal-v2.10.3-62-arm32-release.apk")
+        ("Apk files/jadwal-v2.10.4-63-release.apk", "jadwal-v2.10.4-63-release.apk"),
+        ("Apk files/apk32/jadwal-v2.10.4-63-release.apk", "jadwal-v2.10.4-63-arm32-release.apk")
     ]
 
     for local_path, asset_name in assets:

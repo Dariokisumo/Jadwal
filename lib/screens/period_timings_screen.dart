@@ -9,9 +9,9 @@ import '../services/deep_link_service.dart';
 import '../services/storage_service.dart';
 import '../services/timetable_timings_applier.dart';
 import '../theme/relational_colors.dart';
+import '../widgets/app_dialog.dart';
 import '../widgets/app_feedback.dart';
-import '../widgets/break_indicator.dart';
-import '../widgets/period_slot_card.dart';
+import '../widgets/period_timings/slots_list.dart';
 import '../widgets/profile_import_dialog.dart';
 import '../widgets/time_picker_helper.dart';
 
@@ -241,42 +241,13 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
   }
 
   Future<void> _applyToTimetable() async {
-    final colors = context.relColors;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Apply "${_currentProfile.name}"?',
-          style: const TextStyle(
-            fontFamily: 'Geist',
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Text(
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: 'Apply "${_currentProfile.name}"?',
+      body:
           'This will update start and end times for all matching period slots across Saturday–Thursday in your active timetable.',
-          style: TextStyle(
-            fontFamily: 'Geist',
-            color: colors.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(fontFamily: 'Geist')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: colors.action,
-              foregroundColor: colors.onAction,
-            ),
-            child: const Text(
-              'Apply Now',
-              style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
+      confirmLabel: 'Apply Now',
+      danger: false,
     );
 
     if (confirmed != true) return;
@@ -889,78 +860,13 @@ class _PeriodTimingsScreenState extends State<PeriodTimingsScreen> {
   }
 
   Widget _buildSlotsList(RelationalColors colors) {
-    final slots = <Widget>[];
-
-    for (var i = 1; i <= _periodCount; i++) {
-      final pNum = i;
-      final times = _currentProfile.getTimingFor(pNum);
-      final startTime = times[0];
-      final endTime = times[1];
-
-      // Calculate break from previous period if i > 1
-      if (i > 1) {
-        final prevTimes = _currentProfile.getTimingFor(i - 1);
-        final gap = gapMinutesHmmA(prevTimes[1], startTime);
-        if (gap != null && gap > 0) {
-          final String label;
-          if (gap >= 35) {
-            label = 'Lunch • ${gap}m';
-          } else if (gap >= 15) {
-            label = 'Recess • ${gap}m';
-          } else {
-            label = 'Break • ${gap}m';
-          }
-          slots.add(BreakIndicator(label: label, gapMinutes: gap));
-        }
-      }
-
-      slots.add(PeriodSlotCard(
-        periodNumber: pNum,
-        startTime: startTime,
-        endTime: endTime,
-        onStartTap: () => _pickTimeForPeriod(periodNumber: pNum, isStart: true),
-        onEndTap: () => _pickTimeForPeriod(periodNumber: pNum, isStart: false),
-        colors: colors,
-      ));
-    }
-
-    // Add Period Slot Control Buttons at bottom of list
-    slots.add(
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.base),
-        child: Wrap(
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.xs,
-          children: [
-            OutlinedButton.icon(
-              onPressed: _addPeriodSlot,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: Text('Add Period ${_periodCount + 1}'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: colors.action,
-                side: BorderSide(color: colors.action.withValues(alpha: 0.4)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-            if (_periodCount > 1)
-              TextButton.icon(
-                onPressed: _removeLastPeriodSlot,
-                icon: Icon(Icons.remove_rounded, size: 18, color: colors.danger),
-                label: Text(
-                  'Remove Period $_periodCount',
-                  style: TextStyle(color: colors.danger, fontFamily: 'Geist'),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.base),
-      children: slots,
+    return SlotsList(
+      periodCount: _periodCount,
+      timingFor: (pNum) => _currentProfile.getTimingFor(pNum),
+      gapMinutes: (endPrev, startNext) => gapMinutesHmmA(endPrev, startNext),
+      onPickTime: _pickTimeForPeriod,
+      onAdd: _addPeriodSlot,
+      onRemove: _removeLastPeriodSlot,
     );
   }
 

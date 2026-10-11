@@ -508,9 +508,13 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                         child: FilledButton.tonalIcon(
                           onPressed: _pickAndImportFile,
                           icon: const Icon(Icons.file_open_rounded, size: 18),
-                          label: const Text(
-                            'Import File',
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 13.5, fontWeight: FontWeight.w600),
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Import File',
+                              maxLines: 1,
+                              style: TextStyle(fontFamily: 'Geist', fontSize: 13.5, fontWeight: FontWeight.w600),
+                            ),
                           ),
                           style: FilledButton.styleFrom(
                             backgroundColor: colors.actionSubtle,
@@ -525,9 +529,13 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                         child: OutlinedButton.icon(
                           onPressed: _showSaveCurrentDialog,
                           icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-                          label: const Text(
-                            'Save Current',
-                            style: TextStyle(fontFamily: 'Geist', fontSize: 13.5, fontWeight: FontWeight.w600),
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Save Current',
+                              maxLines: 1,
+                              style: TextStyle(fontFamily: 'Geist', fontSize: 13.5, fontWeight: FontWeight.w600),
+                            ),
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: colors.textPrimary,
@@ -793,12 +801,16 @@ class _SavedTimetablesScreenState extends State<SavedTimetablesScreen> {
                 ),
                 if (timetable.timeSpan != null) ...[
                   const SizedBox(width: 8),
-                  Text(
-                    timetable.timeSpan!,
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 11.5,
-                      color: colors.textSecondary,
+                  Flexible(
+                    child: Text(
+                      timetable.timeSpan!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Geist',
+                        fontSize: 11.5,
+                        color: colors.textSecondary,
+                      ),
                     ),
                   ),
                 ],

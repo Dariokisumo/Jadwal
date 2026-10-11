@@ -81,11 +81,19 @@ ThemeData buildRelationalTheme(
   final dangerColor = isDark ? Primitives.dangerDark : Primitives.danger;
   final dangerSubtleColor =
       isDark ? Primitives.dangerSubtleDark : Primitives.dangerSubtleLight;
+  // ponytail: luminance-derived on-action keeps 4.5:1 on light gold/copper
+  // without per-accent tables; dark text on bright actions, white on dark.
+  final onActionColor = actionColor.computeLuminance() > 0.4
+      ? Primitives.textLight
+      : Colors.white;
+  final onErrorColor = dangerColor.computeLuminance() > 0.4
+      ? Primitives.textLight
+      : Colors.white;
 
   final relationalColors = RelationalColors(
     action: actionColor,
     actionSubtle: actionSubtle,
-    onAction: Colors.white,
+    onAction: onActionColor,
     danger: dangerColor,
     dangerSubtle: dangerSubtleColor,
     surface: surfaceColor,
@@ -105,7 +113,7 @@ ThemeData buildRelationalTheme(
   ).copyWith(
     primary: actionColor,
     primaryContainer: actionSubtle,
-    onPrimary: Colors.white,
+    onPrimary: onActionColor,
     onPrimaryContainer: actionColor,
     surface: surfaceColor,
     onSurface: textPrimaryColor,
@@ -115,7 +123,7 @@ ThemeData buildRelationalTheme(
     outlineVariant: borderSubtleColor,
     error: dangerColor,
     errorContainer: dangerSubtleColor,
-    onError: Colors.white,
+    onError: onErrorColor,
   );
 
   return ThemeData(
@@ -160,24 +168,24 @@ ThemeData buildRelationalTheme(
       ),
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: isDark ? surfaceContainerHighestColor : const Color(0xFF1E1C18),
+      backgroundColor: isDark ? surfaceContainerHighestColor : Primitives.surfaceDark,
       contentTextStyle: TextStyle(
         fontFamily: _kFontFamily,
         fontSize: 13.5,
         fontWeight: FontWeight.w500,
-        color: isDark ? textPrimaryColor : const Color(0xFFFDFBF7),
+        color: isDark ? textPrimaryColor : Primitives.textDark,
       ),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isDark ? borderSubtleColor : const Color(0x2AFFFFFF),
+          color: isDark ? borderSubtleColor : Primitives.borderSubtleDark,
           width: 1,
         ),
       ),
       elevation: 4,
       actionTextColor: actionColor,
-      closeIconColor: isDark ? textSecondaryColor : const Color(0xFFB8B2A6),
+      closeIconColor: isDark ? textSecondaryColor : Primitives.textSecondaryDark,
     ),
     extensions: [
       relationalColors,

@@ -373,35 +373,41 @@ class _PeriodCardState extends State<PeriodCard> {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: secondaryColor.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: secondaryColor.withValues(alpha: 0.15),
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 11,
-                          color: secondaryColor,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: secondaryColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: secondaryColor.withValues(alpha: 0.15),
+                          width: 0.5,
                         ),
-                        const SizedBox(width: 2),
-                        Text(
-                          widget.period.classroom,
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 11,
                             color: secondaryColor,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 2),
+                          Flexible(
+                            child: Text(
+                              widget.period.classroom,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: secondaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
