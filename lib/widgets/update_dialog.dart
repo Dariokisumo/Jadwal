@@ -4,8 +4,9 @@ import '../services/update_service.dart';
 import '../theme/relational_colors.dart';
 import 'app_feedback.dart';
 
-/// A calm, refined modal dialog displaying the latest release changelog
-/// and architecture-aware direct download actions matching Jadwal's "Quiet Companion" design.
+/// A calm, refined modal dialog displaying the latest release changelog,
+/// architecture-aware direct download actions, and step-by-step installation
+/// guidance matching Jadwal's "Quiet Companion" design.
 class UpdateDialog extends StatefulWidget {
   final AppReleaseInfo release;
 
@@ -27,10 +28,12 @@ class UpdateDialog extends StatefulWidget {
   State<UpdateDialog> createState() => _UpdateDialogState();
 }
 
-class _UpdateDialogState extends State<UpdateDialog> {
+class _UpdateDialogState extends State<UpdateDialog>
+    with WidgetsBindingObserver {
   String _detectedArch = 'arm64';
   bool _detecting = true;
   bool _isDownloading = false;
+  bool _isInstalling = false;
   double _downloadProgress = 0.0;
   int _receivedBytes = 0;
   int _totalBytes = 0;
@@ -38,11 +41,40 @@ class _UpdateDialogState extends State<UpdateDialog> {
   String? _downloadError;
   String? _downloadedFilePath;
   String _activeArchLabel = '';
+  bool _canInstallUnknownApps = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _detectArchitecture();
+    _checkInstallPermission();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Re-check permission in case the user just enabled it in system Settings
+      _checkInstallPermission();
+    }
+  }
+
+  Future<void> _checkInstallPermission() async {
+    final canInstall = await UpdateService.canInstallUnknownApps();
+    if (mounted) {
+      setState(() {
+        _canInstallUnknownApps = canInstall;
+        if (canInstall && _downloadError?.contains('Permission') == true) {
+          _downloadError = null;
+        }
+      });
+    }
   }
 
   Future<void> _detectArchitecture() async {
@@ -99,17 +131,18 @@ class _UpdateDialogState extends State<UpdateDialog> {
           _downloadedFilePath = filePath;
         });
 
-        // Automatically prompt the Android system installer
-        final launched = await UpdateService.installApk(filePath);
-        if (!launched && mounted) {
-          final canInstall = await UpdateService.canInstallUnknownApps();
-          if (!canInstall) {
+        // Verify permission and prompt system package installer
+        final canInstall = await UpdateService.canInstallUnknownApps();
+        if (!canInstall) {
+          if (mounted) {
             setState(() {
+              _canInstallUnknownApps = false;
               _downloadError =
-                  'Permission required: Please enable "Install unknown apps" for Jadwal in Settings to update.';
+                  'Permission required: Please enable "Install unknown apps" for Jadwal in Settings to complete the update.';
             });
-            await UpdateService.openInstallUnknownAppsSettings();
           }
+        } else {
+          await _handleInstall();
         }
       }
     } catch (e) {
@@ -117,9 +150,56 @@ class _UpdateDialogState extends State<UpdateDialog> {
         setState(() {
           _isDownloading = false;
           _downloadError =
-              'Direct download failed. You can retry, download in background, or open the release page.';
+              'Direct download interrupted. You can retry, download in background, or open the release page.';
         });
       }
+    }
+  }
+
+  Future<void> _handleInstall() async {
+    if (_downloadedFilePath == null) return;
+
+    final isReady = await UpdateService.isApkFileReady(_downloadedFilePath!);
+    if (!isReady) {
+      if (mounted) {
+        setState(() {
+          _downloadedFilePath = null;
+          _downloadError =
+              'The update file is no longer available. Please tap download to fetch it again.';
+        });
+      }
+      return;
+    }
+
+    final canInstall = await UpdateService.canInstallUnknownApps();
+    if (!canInstall) {
+      if (mounted) {
+        setState(() {
+          _canInstallUnknownApps = false;
+          _downloadError =
+              'Permission required: Tap "Enable in Settings" below, then return to install.';
+        });
+      }
+      await UpdateService.openInstallUnknownAppsSettings();
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isInstalling = true;
+        _downloadError = null;
+      });
+    }
+
+    final launched = await UpdateService.installApk(_downloadedFilePath!);
+    if (mounted) {
+      setState(() {
+        _isInstalling = false;
+        if (!launched) {
+          _downloadError =
+              'Could not launch installer. You can install the downloaded file via your Files app or download in background.';
+        }
+      });
     }
   }
 
@@ -175,348 +255,88 @@ class _UpdateDialogState extends State<UpdateDialog> {
         borderRadius: BorderRadius.circular(24),
         side: BorderSide(color: colors.borderSubtle, width: 1),
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Top Badge & Title Row
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: colors.actionSubtle,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.system_update_rounded,
-                    color: colors.action,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colors.actionSubtle,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'UPDATE AVAILABLE',
-                              style: TextStyle(
-                                fontFamily: 'Geist',
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
-                                color: colors.action,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Jadwal ${release.tagName}',
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'A newer version is ready to install',
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 12.5,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-
-            // Styled Changelog Box
-            Container(
-              constraints: const BoxConstraints(maxHeight: 200),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: colors.surfaceContainer,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: colors.borderSubtle, width: 1),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Top Badge & Title Row
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.auto_awesome_rounded,
-                        size: 14,
-                        color: colors.action,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        "WHAT'S NEW",
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Flexible(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: release.changelogBullets.map((bullet) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 5,
-                                  height: 5,
-                                  margin: const EdgeInsets.only(
-                                    top: 7,
-                                    right: 9,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: colors.action,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    bullet,
-                                    style: TextStyle(
-                                      fontFamily: 'Geist',
-                                      fontSize: 12.5,
-                                      height: 1.35,
-                                      color: colors.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: colors.actionSubtle,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.system_update_rounded,
+                      color: colors.action,
+                      size: 24,
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Device Architecture Detection Notice
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(
-                  _detecting
-                      ? Icons.hourglass_top_rounded
-                      : Icons.check_circle_outline_rounded,
-                  size: 14,
-                  color: colors.action,
-                ),
-                const SizedBox(width: 7),
-                Expanded(
-                  child: Text(
-                    _detecting
-                      ? 'Detecting device architecture...'
-                      : 'Detected $archLabel architecture for your device.',
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-
-            // Simple installation hint
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 1),
-                  child: Icon(
-                    Icons.info_outline_rounded,
-                    size: 14,
-                    color: colors.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: 7),
-                Expanded(
-                  child: Text(
-                    'Tap download to save the matching APK, then open it to install.',
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 11.5,
-                      height: 1.35,
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-
-            // Dynamic Action Area: Downloading / Ready to Install / Idle Buttons
-            if (_isDownloading) ...[
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: colors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: colors.borderSubtle, width: 1),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            value: _downloadProgress > 0 ? _downloadProgress : null,
-                            color: colors.action,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Downloading update (${_activeArchLabel.toUpperCase()})...',
-                            style: TextStyle(
-                              fontFamily: 'Geist',
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: colors.textPrimary,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          _downloadProgress > 0
-                              ? '${(_downloadProgress * 100).toInt()}%'
-                              : 'Connecting...',
-                          style: TextStyle(
-                            fontFamily: 'JetBrainsMono',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: colors.action,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: _downloadProgress > 0 ? _downloadProgress : null,
-                        color: colors.action,
-                        backgroundColor: colors.borderSubtle,
-                        minHeight: 6,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _totalBytes > 0
-                              ? '${_formatBytes(_receivedBytes)} / ${_formatBytes(_totalBytes)}'
-                              : _formatBytes(_receivedBytes),
-                          style: TextStyle(
-                            fontFamily: 'Geist',
-                            fontSize: 11.5,
-                            color: colors.textSecondary,
-                          ),
-                        ),
                         Row(
                           children: [
-                            TextButton(
-                              onPressed: () => _downloadInBackground(
-                                targetDownloadUrl,
-                                archLabel,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
                               ),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              decoration: BoxDecoration(
+                                color: colors.actionSubtle,
+                                borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                'Background',
+                                'UPDATE AVAILABLE',
                                 style: TextStyle(
-                                  fontFamily: 'Geist',
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
                                   color: colors.action,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            TextButton(
-                              onPressed: _cancelDownload,
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: Text(
-                                'Cancel',
-                                style: TextStyle(
-                                  fontFamily: 'Geist',
-                                  fontSize: 11.5,
-                                  color: colors.textSecondary,
                                 ),
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Jadwal ${release.tagName}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'A newer version is ready to install',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: colors.textSecondary,
+                          ),
+                        ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ] else if (_downloadedFilePath != null) ...[
+              const SizedBox(height: 18),
+
+              // Styled Changelog Box
               Container(
+                constraints: const BoxConstraints(maxHeight: 200),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: colors.surfaceContainer,
@@ -524,202 +344,578 @@ class _UpdateDialogState extends State<UpdateDialog> {
                   border: Border.all(color: colors.borderSubtle, width: 1),
                 ),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         Icon(
-                          Icons.check_circle_rounded,
-                          size: 20,
+                          Icons.auto_awesome_rounded,
+                          size: 14,
                           color: colors.action,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Update downloaded and ready',
-                            style: TextStyle(
-                              fontFamily: 'Geist',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: colors.textPrimary,
-                            ),
+                        const SizedBox(width: 6),
+                        Text(
+                          "WHAT'S NEW",
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.4,
+                            color: colors.textSecondary,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: () => UpdateService.installApk(_downloadedFilePath!),
-                      icon: Icon(
-                        Icons.install_mobile_rounded,
-                        size: 18,
-                        color: colors.onAction,
-                      ),
-                      label: Text(
-                        'Install Update Now',
-                        style: TextStyle(
-                          fontFamily: 'Geist',
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: colors.onAction,
-                        ),
-                      ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: colors.action,
-                        minimumSize: const Size.fromHeight(42),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                    const SizedBox(height: 10),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: release.changelogBullets.map((bullet) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 5,
+                                    height: 5,
+                                    margin: const EdgeInsets.only(
+                                      top: 7,
+                                      right: 9,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colors.action,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      bullet,
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        height: 1.35,
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    'Done',
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 12.5,
-                      color: colors.textSecondary,
+              const SizedBox(height: 14),
+
+              // Reassurance & Architecture Info Row
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainer.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: colors.borderSubtle.withValues(alpha: 0.7)),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _detecting
+                              ? Icons.hourglass_top_rounded
+                              : Icons.check_circle_outline_rounded,
+                          size: 14,
+                          color: colors.action,
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            _detecting
+                                ? 'Detecting device architecture...'
+                                : 'Detected $archLabel architecture for your device.',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.security_rounded,
+                          size: 14,
+                          color: colors.action,
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: Text(
+                            'Safe update: All saved timetables, widgets, and settings will remain untouched.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              height: 1.3,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ] else ...[
+              const SizedBox(height: 16),
+
+              // Permission Warning Banner (if permission needed)
+              if (!_canInstallUnknownApps) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: colors.actionSubtle,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: colors.action.withValues(alpha: 0.4)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.admin_panel_settings_rounded,
+                            size: 18,
+                            color: colors.action,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Permission Required for Install',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: colors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Android requires permission to install APK updates from within Jadwal. Tap below to enable "Install unknown apps" in Settings.',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    height: 1.35,
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: UpdateService.openInstallUnknownAppsSettings,
+                        icon: Icon(
+                          Icons.open_in_new_rounded,
+                          size: 15,
+                          color: colors.action,
+                        ),
+                        label: Text(
+                          'Enable in Settings',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: colors.action,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: colors.action),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Error Notice Box
               if (_downloadError != null) ...[
                 Container(
                   padding: const EdgeInsets.all(10),
-                  margin: const EdgeInsets.only(bottom: 10),
+                  margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
                     color: colors.surfaceContainer,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: colors.borderSubtle),
                   ),
-                  child: Text(
-                    _downloadError!,
-                    style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 11.5,
-                      height: 1.3,
-                      color: colors.textSecondary,
-                    ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 16,
+                        color: colors.textSecondary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _downloadError!,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            height: 1.3,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
 
-              // Primary Direct Download Button (Auto-matched to device ABI)
-              FilledButton.icon(
-                onPressed: () => _startDirectDownload(targetDownloadUrl, archLabel),
-                icon: Icon(
-                  Icons.download_rounded,
-                  size: 19,
-                  color: colors.onAction,
-                ),
-                label: Text(
-                  'Download Update ($archLabel APK)',
-                  style: TextStyle(
-                    fontFamily: 'Geist',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: colors.onAction,
+              // Dynamic Action Area: Downloading / Ready to Install / Idle Buttons
+              if (_isDownloading) ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: colors.borderSubtle, width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              value: _downloadProgress > 0 ? _downloadProgress : null,
+                              color: colors.action,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Downloading update (${_activeArchLabel.toUpperCase()})...',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: colors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            _downloadProgress > 0
+                                ? '${(_downloadProgress * 100).toInt()}%'
+                                : 'Connecting...',
+                            style: TextStyle(
+                              fontFamily: 'JetBrainsMono',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: colors.action,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: _downloadProgress > 0 ? _downloadProgress : null,
+                          color: colors.action,
+                          backgroundColor: colors.borderSubtle,
+                          minHeight: 6,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _totalBytes > 0
+                                ? '${_formatBytes(_receivedBytes)} / ${_formatBytes(_totalBytes)}'
+                                : _formatBytes(_receivedBytes),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              TextButton(
+                                onPressed: () => _downloadInBackground(
+                                  targetDownloadUrl,
+                                  archLabel,
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text(
+                                  'Background',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: colors.action,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              TextButton(
+                                onPressed: _cancelDownload,
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text(
+                                  'Cancel',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: colors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: colors.action,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              ] else if (_downloadedFilePath != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: colors.borderSubtle, width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle_rounded,
+                            size: 20,
+                            color: colors.action,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Update downloaded and ready',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: colors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.icon(
+                        onPressed: _isInstalling ? null : _handleInstall,
+                        icon: _isInstalling
+                            ? SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: colors.onAction,
+                                ),
+                              )
+                            : Icon(
+                                Icons.install_mobile_rounded,
+                                size: 18,
+                                color: colors.onAction,
+                              ),
+                        label: Text(
+                          _isInstalling ? 'Launching Installer...' : 'Install Update Now',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: colors.onAction,
+                          ),
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colors.action,
+                          minimumSize: const Size.fromHeight(44),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () => _startDirectDownload(targetDownloadUrl, archLabel),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Re-download',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Done',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              ),
-
-              // Alternate architecture download button if available
-              if (hasAlternate) ...[
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _startDirectDownload(otherDownloadUrl, otherLabel),
+              ] else ...[
+                // Primary Direct Download Button (Auto-matched to device ABI)
+                FilledButton.icon(
+                  onPressed: () => _startDirectDownload(targetDownloadUrl, archLabel),
                   icon: Icon(
                     Icons.download_rounded,
-                    size: 17,
-                    color: colors.textPrimary,
+                    size: 19,
+                    color: colors.onAction,
                   ),
                   label: Text(
-                    'Download alternate ($otherLabel APK)',
+                    'Download Update ($archLabel APK)',
                     style: TextStyle(
-                      fontFamily: 'Geist',
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w500,
-                      color: colors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onAction,
                     ),
                   ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: colors.borderSubtle, width: 1),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colors.action,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
-              ],
 
-              const SizedBox(height: 6),
-
-              // Bottom row: Release page link & Later
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      UpdateService.openUrl(release.htmlUrl);
-                    },
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                // Alternate architecture download button if available
+                if (hasAlternate) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _startDirectDownload(otherDownloadUrl, otherLabel),
+                    icon: Icon(
+                      Icons.download_rounded,
+                      size: 17,
+                      color: colors.textPrimary,
                     ),
-                    child: Text(
-                      'Release page',
+                    label: Text(
+                      'Download alternate ($otherLabel APK)',
                       style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 12,
-                        color: colors.textSecondary,
-                        decoration: TextDecoration.underline,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: colors.textPrimary,
                       ),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text(
-                      'Later',
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: colors.textSecondary,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: colors.borderSubtle, width: 1),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
                 ],
-              ),
+
+                const SizedBox(height: 6),
+
+                // Bottom row: Release page link & Later
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        UpdateService.openUrl(release.htmlUrl);
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        'Release page',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.textSecondary,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        'Later',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

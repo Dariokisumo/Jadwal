@@ -103,13 +103,15 @@ class UpdateService {
           final downloadUrl = item['browser_download_url'] as String?;
 
           if (downloadUrl != null && name.endsWith('.apk')) {
-            if (name.contains('arm64') || name.contains('v8a')) {
-              arm64Url = downloadUrl;
-            } else if (name.contains('arm32') ||
+            if (name.contains('arm32') ||
                 name.contains('v7a') ||
                 name.contains('armeabi')) {
               arm32Url = downloadUrl;
+            } else if (name.contains('arm64') || name.contains('v8a')) {
+              arm64Url = downloadUrl;
             } else {
+              // Default release build target (arm64-v8a in Jadwal)
+              arm64Url ??= downloadUrl;
               fallbackApkUrl ??= downloadUrl;
             }
           }
@@ -196,10 +198,13 @@ class UpdateService {
       final bulletMatch = RegExp(r'^(?:[-*]|\d+\.)\s+(.+)$').firstMatch(trimmed);
       if (bulletMatch != null) {
         var content = bulletMatch.group(1) ?? '';
-        // Clean markdown bold/italic (**bold** -> bold)
-        content = content.replaceAll(RegExp(r'\*\*([^*]+)\*\*'), r'$1');
-        content = content.replaceAll(RegExp(r'\*([^*]+)\*'), r'$1');
-        content = content.replaceAll(RegExp(r'`([^`]+)`'), r'$1');
+        // Clean markdown bold/italic/code (**bold** -> bold)
+        content = content.replaceAllMapped(
+            RegExp(r'\*\*([^*]+)\*\*'), (m) => m[1] ?? '');
+        content = content.replaceAllMapped(
+            RegExp(r'\*([^*]+)\*'), (m) => m[1] ?? '');
+        content = content.replaceAllMapped(
+            RegExp(r'`([^`]+)`'), (m) => m[1] ?? '');
 
         if (content.isNotEmpty && bullets.length < 5) {
           bullets.add(content);
@@ -268,6 +273,16 @@ class UpdateService {
   static Future<bool> installApk(String filePath) async {
     final result = await _invoke<bool>('installApk', {'filePath': filePath});
     return result ?? false;
+  }
+
+  /// Verifies that a downloaded APK file exists on disk and is non-empty.
+  static Future<bool> isApkFileReady(String filePath) async {
+    try {
+      final file = File(filePath);
+      return await file.exists() && (await file.length()) > 0;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Checks if the user has permitted the app to install unknown packages.

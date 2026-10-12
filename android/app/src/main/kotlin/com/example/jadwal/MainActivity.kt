@@ -173,19 +173,7 @@ class MainActivity: FlutterActivity() {
                     }
                 }
                 "openInstallUnknownAppsSettings" -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        try {
-                            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                                data = Uri.parse("package:$packageName")
-                            }
-                            startActivity(intent)
-                            result.success(true)
-                        } catch (_: Exception) {
-                            result.success(false)
-                        }
-                    } else {
-                        result.success(true)
-                    }
+                    result.success(openInstallUnknownAppsSettings())
                 }
                 "downloadWithDownloadManager" -> {
                     val url = call.argument<String>("url")
@@ -467,6 +455,42 @@ class MainActivity: FlutterActivity() {
 
     private var downloadReceiver: BroadcastReceiver? = null
 
+    private fun openInstallUnknownAppsSettings(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Attempt 1: Direct app settings in MANAGE_UNKNOWN_APP_SOURCES
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:$packageName")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+                return true
+            } catch (_: Exception) {}
+
+            // Attempt 2: Generic MANAGE_UNKNOWN_APP_SOURCES list
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+                return true
+            } catch (_: Exception) {}
+
+            // Attempt 3: App details settings
+            try {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+                return true
+            } catch (_: Exception) {}
+
+            return false
+        }
+        return true
+    }
+
     private fun installApk(filePath: String): Boolean {
         return try {
             val file = File(filePath)
@@ -480,9 +504,18 @@ class MainActivity: FlutterActivity() {
             )
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "application/vnd.android.package-archive")
+                clipData = ClipData.newRawUri("Jadwal Update", uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
+
+            // Proactively grant read permission to package installer handlers
+            val resInfoList = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            for (resolveInfo in resInfoList) {
+                val targetPkg = resolveInfo.activityInfo.packageName
+                grantUriPermission(targetPkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
             startActivity(intent)
             true
         } catch (e: Exception) {
