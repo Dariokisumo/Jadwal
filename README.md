@@ -9,12 +9,13 @@
 **An offline, glanceable timetable companion for teachers.**
 
 [![Latest Release](https://img.shields.io/github/v/release/Dariokisumo/Jadwal?style=flat-square&color=D4930D&labelColor=1A1612&label=release)](https://github.com/Dariokisumo/Jadwal/releases/latest)
+[![Live Web App](https://img.shields.io/badge/web_companion-getjadwal.surge.sh-D4930D?style=flat-square&labelColor=1A1612)](https://getjadwal.surge.sh)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-D4930D?style=flat-square&labelColor=1A1612)](LICENSE)
 [![Platform: Android](https://img.shields.io/badge/platform-Android_10+-D4930D?style=flat-square&labelColor=1A1612)](https://github.com/Dariokisumo/Jadwal/releases)
 [![Privacy: 100% Offline](https://img.shields.io/badge/privacy-100%25_offline-D4930D?style=flat-square&labelColor=1A1612)](#privacy--permission-transparency)
 [![Framework: Flutter](https://img.shields.io/badge/framework-Flutter_3.44-D4930D?style=flat-square&labelColor=1A1612)](https://flutter.dev)
 
-[Download APK](#download--installation) &ensp;·&ensp; [The Quiet Companion](#the-quiet-companion) &ensp;·&ensp; [How It Works](#how-it-works) &ensp;·&ensp; [Architecture & Design](#architecture--design-system) &ensp;·&ensp; [Development](#development)
+[Live Web Companion](https://getjadwal.surge.sh) &ensp;·&ensp; [Download APK](#download--installation) &ensp;·&ensp; [The Quiet Companion](#the-quiet-companion) &ensp;·&ensp; [How It Works](#how-it-works) &ensp;·&ensp; [Architecture & Design](#architecture--design-system) &ensp;·&ensp; [Development](#development)
 
 </div>
 
@@ -31,6 +32,8 @@ Pre-compiled, signed APK binaries are published with every release. Jadwal requi
 
 > [!TIP]
 > Download the **arm64-v8a** version for virtually all devices manufactured after 2017. Verify complete release notes and checksums on the [Releases page](https://github.com/Dariokisumo/Jadwal/releases/latest).
+> 
+> Want to preview or share timetables directly in a browser without installing the app? Open the web companion at [**getjadwal.surge.sh**](https://getjadwal.surge.sh).
 
 ---
 
