@@ -1,4 +1,4 @@
 /// Current semantic application version and build number.
 /// Keep synchronized with pubspec.yaml.
-const String kAppVersion = '2.10.4';
-const int kAppBuildNumber = 63;
+const String kAppVersion = '2.10.5';
+const int kAppBuildNumber = 64;
