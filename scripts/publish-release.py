@@ -23,22 +23,22 @@ def main():
     token = get_token()
     owner = "Dariokisumo"
     repo = "Jadwal"
-    tag = "v2.10.4"
-    release_name = "v2.10.4 — Period Reminder Auto-Dismissal & Modular Relational UI"
-    release_body = """## What's new in v2.10.4
+    tag = "v2.10.5"
+    release_name = "v2.10.5 — Illustrated App Logo & Themed Monochrome Icon"
+    release_body = """## What's new in v2.10.5
 
-### ⏰ Notification Timing & Auto-Dismissal
-- **Period Reminder Auto-Clear**: Class reminder notifications scheduled 5 minutes before class now automatically clear 5 minutes after class begins (`timeoutAfter: 10min`), preventing stale notifications from cluttering the status bar or lock screen.
-- **Single Live Reminder**: Preserves `onlyAlertOnce: true` and high-priority reminder channels for subtle, non-intrusive alerts.
+### 🎨 Illustrated App Brand Logo
+- **New Illustrated Icon**: Integrated the new illustrated calendar & clock brand icon across all Android launcher densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`) and web touch icons.
+- **Normal Launcher Clarity**: Full-color illustrated calendar and clock artwork with realistic drop-shadow depth against a crisp white background badge.
 
-### 🎨 Modular Relational UI Refactoring
-- **WeekStrip Component**: Extracted calendar week selector into a dedicated, responsive widget (`WeekStrip`) supporting narrow screen constraints.
-- **Unified AppDialog & AppSheet**: Standardized confirmation modals and bottom sheets (`AppDialog`, `AppSheet`) across all screens for consistent surface hierarchy and elevation.
-- **Modularized Screen Subcomponents**: Cleanly decoupled `HomeScreen`, `SetupScreen`, and `PeriodTimingsScreen` into composable subcomponents for faster build iterations and maintainability.
+### 🌓 Material You Adaptive Monochrome Themed Icon
+- **Negative-Space Depth Architecture**: Rather than flattening the icon into an amorphous solid blob, the monochrome layer uses transparent viewports for the calendar body and clock face, providing maximum contrast for the number **7** and clock hands.
+- **3D Spiral Binder Rings**: Preserved ring apertures ensuring the spiral loops arch naturally over the binder.
+- **Multi-Tone Alpha Shading**: Soft secondary opacity for the binder header and fanned bottom pages retains 3D paper layers across both Light and Dark system wallpaper palettes.
+- **Subpixel Anti-Aliasing**: Smooth boundary Gaussian edge modulation prevents stair-stepping across all display densities.
 
-### ⚡ Build System & Android Stability
-- **Gradle VFS Watching & Incremental Build**: Enabled `org.gradle.vfs.watch=true` and `kotlin.incremental=true` in `gradle.properties` for lightning-fast incremental builds.
-- **Verified Dual ABI Releases**: Independent compilation and cryptographic signing for both 64-bit and 32-bit release APKs.
+### 🌐 Companion Web Portal & Synchronized Downloads
+- Synced direct APK download links and brand favicons on `https://getjadwal.surge.sh` and `https://dariokisumo.github.io`.
 
 ---
 
@@ -46,8 +46,8 @@ def main():
 
 | File | Architecture | Target Devices | Size | SHA256 |
 |---|---|---|---|---|
-| `jadwal-v2.10.4-63-release.apk` | **arm64-v8a** (64-bit) | Modern Android phones & tablets (recommended) | 24.21 MB | `55d8b6721c4ff77067b49f26073a2593ddda72126f3c1c5dbd8f8aac8c1ad882` |
-| `jadwal-v2.10.4-63-arm32-release.apk` | **armeabi-v7a** (32-bit) | Older & budget 32-bit Android devices | 21.84 MB | `a1fb1c6d8a65797b6e6e06939cd1b87ee821e96ef5a53431aec4411cc5c6b49f` |
+| `jadwal-v2.10.5-64-release.apk` | **arm64-v8a** (64-bit) | Modern Android phones & tablets (recommended) | 24.33 MB | `c9ebe8770876e2f5545876e3521777fbc4922983e070dab220c7f772c7a555fc` |
+| `jadwal-v2.10.5-64-arm32-release.apk` | **armeabi-v7a** (32-bit) | Older & budget 32-bit Android devices | 21.98 MB | `a8492ac8c221eb274af2cb6e1d762c06ff0211f48fb8a5019ad8d976083d7582` |
 """
 
     headers = {
@@ -88,8 +88,8 @@ def main():
 
     # Assets to upload
     assets = [
-        ("Apk files/jadwal-v2.10.4-63-release.apk", "jadwal-v2.10.4-63-release.apk"),
-        ("Apk files/apk32/jadwal-v2.10.4-63-release.apk", "jadwal-v2.10.4-63-arm32-release.apk")
+        ("Apk files/jadwal-v2.10.5-64-release.apk", "jadwal-v2.10.5-64-release.apk"),
+        ("Apk files/apk32/jadwal-v2.10.5-64-release.apk", "jadwal-v2.10.5-64-arm32-release.apk")
     ]
 
     for local_path, asset_name in assets:
