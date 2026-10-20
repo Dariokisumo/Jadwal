@@ -254,6 +254,23 @@ class MainActivity: FlutterActivity() {
                     }
                     result.success(launched)
                 }
+                "openSystemSettings" -> {
+                    val action = call.argument<String>("action")
+                    if (action != null) {
+                        val opened = try {
+                            val intent = Intent(action).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(intent)
+                            true
+                        } catch (_: Exception) {
+                            false
+                        }
+                        result.success(opened)
+                    } else {
+                        result.success(false)
+                    }
+                }
                 else -> {
                     result.notImplemented()
                 }
@@ -427,6 +444,7 @@ class MainActivity: FlutterActivity() {
                 data = Uri.parse("package:$packageName")
             }
             startActivity(intent)
+            return true
         } catch (_: Exception) {
             // Fallback: open the generic app-details settings page
             try {
@@ -434,6 +452,7 @@ class MainActivity: FlutterActivity() {
                     data = Uri.fromParts("package", packageName, null)
                 }
                 startActivity(intent)
+                return true
             } catch (_: Exception) {}
         }
         return false

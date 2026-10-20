@@ -33,29 +33,29 @@ Future<void> main() async {
   }
 
   final results = await Future.wait([
-    StorageService.isTimetableLoaded(),
     StorageService.loadThemeMode(),
     StorageService.loadTimetable(),
     StorageService.loadAccent(),
   ]);
 
-  final alreadySetUp = results[0] as bool;
-  final savedTheme = results[1] as String;
-  final savedAccent = results[3] as String;
+  final savedTheme = results[0] as String;
+  final timetableData = results[1] as Map<String, dynamic>?;
+  final savedAccent = results[2] as String;
+  final alreadySetUp = timetableData != null;
 
   // Re-register recurring alarms at startup so they survive reboots
   // even if HomeScreen hasn't loaded yet.
   if (alreadySetUp) {
-    final data = results[2] as Map<String, dynamic>?;
-    if (data != null) {
-      try {
+    try {
+      final tt = timetableData['timetable'];
+      if (tt is Map) {
         await NotificationService.scheduleAll(
-          data['timetable'] as Map<String, dynamic>,
+          tt.cast<String, dynamic>(),
         );
-      } catch (e, stack) {
-        debugPrint('main: NotificationService.scheduleAll failed: $e');
-        debugPrintStack(stackTrace: stack);
       }
+    } catch (e, stack) {
+      debugPrint('main: NotificationService.scheduleAll failed: $e');
+      debugPrintStack(stackTrace: stack);
     }
   }
 

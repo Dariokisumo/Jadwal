@@ -27,7 +27,7 @@
     <!-- Required on Android 8.0+ (API 26+) to prompt the system package installer for APK updates. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
-    <!-- Package visibility queries for Android 11+ (API 30+) to detect installed assistant apps -->
+    <!-- Package visibility queries for Android 11+ (API 30+) to detect installed assistant apps and package installer -->
     <queries>
         <package android:name="com.google.android.apps.bard" />
         <package android:name="com.openai.chatgpt" />
@@ -35,6 +35,10 @@
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
         </intent>
     </queries>
 

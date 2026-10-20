@@ -21,6 +21,31 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_jsonKey, jsonEncode(data));
     await prefs.setBool(_loadedKey, true);
+
+    // Keep active saved timetable library entry in sync so edits are not lost
+    final activeId = prefs.getString(_activeTimetableIdKey);
+    final rawLibrary = prefs.getString(_savedTimetablesKey);
+    if (activeId != null && rawLibrary != null && rawLibrary.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawLibrary) as List;
+        var modified = false;
+        final updatedList = decoded.map((item) {
+          if (item is Map && item['id'] == activeId) {
+            modified = true;
+            return {
+              ...Map<String, dynamic>.from(item),
+              'updatedAt': DateTime.now().toIso8601String(),
+              'data': data,
+            };
+          }
+          return item;
+        }).toList();
+
+        if (modified) {
+          await prefs.setString(_savedTimetablesKey, jsonEncode(updatedList));
+        }
+      } catch (_) {}
+    }
   }
 
   static Future<Map<String, dynamic>?> loadTimetable() async {
@@ -50,6 +75,7 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_jsonKey);
     await prefs.remove(_loadedKey);
+    await prefs.remove(_activeTimetableIdKey);
     // Clear all finished override keys.
     final keys = prefs.getKeys().where((k) => k.startsWith(_overridesPrefix));
     for (final key in keys) {
@@ -313,8 +339,8 @@ class StorageService {
   /// Activates the given saved timetable: sets it as live timetable in storage,
   /// updates the active ID, and marks it loaded.
   static Future<void> activateTimetable(SavedTimetable timetable) async {
-    await saveTimetable(timetable.data);
     await saveActiveTimetableId(timetable.id);
+    await saveTimetable(timetable.data);
   }
 
   /// Saves the current live timetable snapshot as a new entry in the library.

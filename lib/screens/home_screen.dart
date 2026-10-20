@@ -1,10 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer' as developer;
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:android_intent_plus/android_intent.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../constants/spacing.dart';
@@ -17,6 +14,7 @@ import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/update_service.dart';
 import '../models/saved_timetable.dart';
+import '../services/json_validator.dart';
 import '../services/widget_data_service.dart';
 import '../theme/relational_colors.dart';
 import '../widgets/app_dialog.dart';
@@ -210,6 +208,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _checkPermissions();
       setState(() {});
       _checkClipboardForProfile();
       DeepLinkService.checkInitialLink();
@@ -255,40 +254,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
 
       // 2. Check for full Timetable JSON payload
-      if (text.startsWith('{') && text.contains('"timetable"')) {
-        try {
-          final decoded = jsonDecode(text);
-          if (decoded is Map<String, dynamic> && decoded['timetable'] is Map) {
-            final timetableMap = decoded['timetable'] as Map;
-            final dayCount = timetableMap.keys.length;
-            final teacher = decoded['teacher_name'] as String? ?? 'Teacher';
+      final normalized = JsonValidator.tryParseAndNormalize(text);
+      if (normalized != null && mounted) {
+        final timetableMap = normalized['timetable'] as Map? ?? {};
+        final activeDayCount = timetableMap.values
+            .where((v) => v is List && v.isNotEmpty)
+            .length;
+        final teacher = normalized['teacher'] as String? ?? 'Teacher';
 
-            if (mounted) {
-              final shouldImport = await ClipboardImportSheet.show(
-                context,
-                title: 'Timetable Detected',
-                badge: 'CLIPBOARD DETECTED',
-                name: '$teacher\'s Timetable',
-                details: '$dayCount active teaching days',
-                confirmLabel: 'Review & Import',
-                icon: Icons.table_chart_rounded,
-              );
+        final shouldImport = await ClipboardImportSheet.show(
+          context,
+          title: 'Timetable Detected',
+          badge: 'CLIPBOARD DETECTED',
+          name: '$teacher\'s Timetable',
+          details: '$activeDayCount active teaching days',
+          confirmLabel: 'Review & Import',
+          icon: Icons.table_chart_rounded,
+        );
 
-              if (shouldImport == true && mounted) {
-                await _confirmAndImportTimetableJson(decoded);
-                await StorageService.markClipboardTextDismissed(text);
-              } else if (shouldImport == false) {
-                await StorageService.markClipboardTextDismissed(text);
-              }
-            }
-          }
-        } catch (_) {}
+        if (shouldImport == true && mounted) {
+          await _confirmAndImportTimetableJson(normalized);
+          await StorageService.markClipboardTextDismissed(text);
+        } else if (shouldImport == false) {
+          await StorageService.markClipboardTextDismissed(text);
+        }
       }
     } catch (_) {}
   }
 
   Future<void> _confirmAndImportTimetableJson(Map<String, dynamic> data) async {
-    final teacher = data['teacher_name'] as String? ?? 'Teacher';
+    final teacher = data['teacher'] as String? ?? 'Teacher';
     final confirmed = await AppDialog.confirm(
       context,
       title: 'Import Timetable for $teacher?',
@@ -299,7 +294,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
 
     if (confirmed == true && mounted) {
-      await StorageService.saveTimetable(data);
+      final now = DateTime.now();
+      final newEntry = SavedTimetable(
+        id: now.millisecondsSinceEpoch.toString(),
+        name: '$teacher\'s Timetable',
+        createdAt: now,
+        updatedAt: now,
+        data: data,
+      );
+      final library = await StorageService.loadSavedTimetables();
+      library.insert(0, newEntry);
+      await StorageService.saveSavedTimetables(library);
+      await StorageService.activateTimetable(newEntry);
       final rawTimetable = data['timetable'] as Map<String, dynamic>? ?? {};
       unawaited(NotificationService.scheduleAll(rawTimetable));
       unawaited(WidgetDataService.updateWidget());
@@ -349,7 +355,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _loadPeriodsForDay(_selectedDayKey);
     _scheduleNotificationsForToday();
     _checkPermissions();
-    _enforceNotificationPermission();
 
     // Update home screen widget
     try {
@@ -367,112 +372,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _enforceNotificationPermission() async {
-    final status = await Permission.notification.status;
-    if (!status.isGranted && mounted) {
-      _showMandatoryPermissionDialog();
-    } else {
-      // Check exact alarm permission too — request it to trigger system dialog
-      final exactAlarmOk =
-          await NotificationService.requestExactAlarmPermission();
-      if (!exactAlarmOk && mounted) {
-        _showExactAlarmPermissionDialog();
+  Future<void> _handlePermissionWarningTap() async {
+    final isNotif = _permissionsMissing;
+    final confirmed = await AppDialog.confirm(
+      context,
+      title: isNotif ? 'Enable Notifications' : 'Alarms & Reminders',
+      body: isNotif
+          ? 'Jadwal needs notification access to remind you 5 minutes before each class starts.'
+          : 'To deliver class alerts at the exact time on Android 14+, Jadwal needs "Alarms & reminders" permission.',
+      confirmLabel: 'Open Settings',
+      cancelLabel: 'Later',
+      danger: false,
+    );
+    if (confirmed == true) {
+      if (isNotif) {
+        await openAppSettings();
+      } else {
+        await NotificationService.requestExactAlarmPermission();
       }
+      _checkPermissions();
     }
-  }
-
-  void _showMandatoryPermissionDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Notifications Required',
-            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
-        content: const Text(
-          'Jadwal needs notification permissions to remind you about your classes. '
-          'Please enable notifications in system settings to continue.',
-          style: TextStyle(fontFamily: 'Geist'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => openAppSettings(),
-            child: const Text('Open Settings',
-                style: TextStyle(fontFamily: 'Geist')),
-          ),
-          TextButton(
-            onPressed: () async {
-              final status = await Permission.notification.status;
-              if (status.isGranted) {
-                if (mounted) Navigator.pop(ctx);
-                _scheduleNotificationsForToday();
-                _checkPermissions();
-              } else {
-                if (mounted) {
-                  AppFeedback.showError(context, 'Permission still missing.');
-                }
-              }
-            },
-            child: const Text('I\'ve Enabled It',
-                style: TextStyle(
-                    fontFamily: 'Geist', fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showExactAlarmPermissionDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Exact Alarm Permission',
-            style: TextStyle(fontFamily: 'Geist', fontWeight: FontWeight.w700)),
-        content: const Text(
-          'Jadwal needs "Alarms & reminders" permission to send notifications at the exact time before each class.\n\n'
-          'Please enable "Alarms & reminders" in the settings screen, then come back and tap "I\'ve Enabled It".',
-          style: TextStyle(fontFamily: 'Geist'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              if (Platform.isAndroid) {
-                const intent = AndroidIntent(
-                  action: 'android.settings.REQUEST_SCHEDULE_EXACT_ALARM',
-                  data: 'package:com.example.jadwal',
-                );
-                await intent.launch();
-              } else {
-                await openAppSettings();
-              }
-            },
-            child: const Text('Open Settings',
-                style: TextStyle(fontFamily: 'Geist')),
-          ),
-          TextButton(
-            onPressed: () async {
-              final granted =
-                  await NotificationService.hasExactAlarmPermission();
-              if (granted) {
-                if (mounted) Navigator.pop(ctx);
-                _scheduleNotificationsForToday();
-                _checkPermissions();
-              } else {
-                if (mounted) {
-                  AppFeedback.showError(
-                    context,
-                    'Permission still missing. Please enable "Alarms & reminders".',
-                  );
-                }
-              }
-            },
-            child: const Text('I\'ve Enabled It',
-                style: TextStyle(
-                    fontFamily: 'Geist', fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _checkPermissions() async {
@@ -587,6 +506,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       await StorageService.clear();
       await NotificationService.cancelAll();
+      await WidgetDataService.updateWidget();
     } catch (e, st) {
       developer.log('Reimport cleanup failed',
           name: 'HomeScreen', error: e, stackTrace: st);
@@ -843,6 +763,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         ),
         actions: [
+          if (_permissionsMissing || _exactAlarmMissing)
+            IconButton(
+              icon: Icon(Icons.notifications_off_rounded, color: colors.danger),
+              tooltip: _permissionsMissing
+                  ? 'Enable Notifications'
+                  : 'Fix Alarms & Reminders',
+              onPressed: _handlePermissionWarningTap,
+            ),
           PopupMenuButton<String>(
             onSelected: _onMenuAction,
             icon: Icon(
@@ -898,21 +826,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ],
           ),
-          if (_permissionsMissing || _exactAlarmMissing)
-            IconButton(
-              icon: Icon(Icons.notifications_off_rounded, color: colors.danger),
-              tooltip: _permissionsMissing
-                  ? 'Enable Notifications'
-                  : 'Fix Alarms & Reminders',
-              onPressed: () async {
-                if (_permissionsMissing) {
-                  await openAppSettings();
-                } else if (_exactAlarmMissing) {
-                  await NotificationService.requestExactAlarmPermission();
-                }
-                _checkPermissions();
-              },
-            ),
           const SizedBox(width: 8),
         ],
       ),

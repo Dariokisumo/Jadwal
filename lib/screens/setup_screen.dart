@@ -198,10 +198,28 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && !_isProcessing && !_showStepThree) {
+    if (state == AppLifecycleState.resumed) {
       _detectInstalledApps();
-      _checkClipboardForTimetable(userInitiated: false);
+      if (!_isProcessing && !_showStepThree) {
+        _checkClipboardForTimetable(userInitiated: false);
+      }
+      if (_showStepThree) {
+        _refreshStepThreePermissions();
+      }
     }
+  }
+
+  Future<void> _refreshStepThreePermissions() async {
+    try {
+      final notif = await NotificationService.arePermissionsGranted();
+      final alarm = await NotificationService.hasExactAlarmPermission();
+      if (mounted) {
+        setState(() {
+          _notificationsEnabled = notif;
+          _alarmsEnabled = alarm;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _detectInstalledApps() async {

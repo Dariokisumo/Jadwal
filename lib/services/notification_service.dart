@@ -152,30 +152,22 @@ class NotificationService {
   static Future<bool> requestExactAlarmPermission() async {
     if (!Platform.isAndroid) return true;
     try {
-      // First check if already granted
       if (await hasExactAlarmPermission()) return true;
 
-      // Request via platform channel
-      final result = await _channel.invokeMethod<bool>('requestExactAlarm');
-      if (result == true) return true;
+      // Request via platform channel (opens Alarms & reminders settings)
+      final launched = await _channel.invokeMethod<bool>('requestExactAlarm');
+      if (launched == true) return false;
 
-      // Fallback: open app settings so user can find Alarms & reminders
+      // Fallback only if the exact alarm intent couldn't launch
       await openAppSettings();
-
       return await hasExactAlarmPermission();
     } catch (e, stack) {
       debugPrint('NotificationService.requestExactAlarmPermission failed: $e');
       debugPrintStack(stackTrace: stack);
-      // If channel fails, try opening settings directly
       try {
         await openAppSettings();
-        return await hasExactAlarmPermission();
-      } catch (e2, stack2) {
-        debugPrint(
-            'NotificationService.requestExactAlarmPermission fallback failed: $e2');
-        debugPrintStack(stackTrace: stack2);
-        return false;
-      }
+      } catch (_) {}
+      return false;
     }
   }
 
@@ -270,7 +262,6 @@ class NotificationService {
       priority: Priority.high,
       groupKey: 'com.jadwal.period_reminders',
       color: Primitives.actionGold,
-      subText: 'Jadwal',
       category: AndroidNotificationCategory.reminder,
       onlyAlertOnce: true,
       // ponytail: single live reminder — fires 5min early, auto-clears ~5min into period.
@@ -280,7 +271,10 @@ class NotificationService {
     const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     final now = tz.TZDateTime.from(DateTime.now(), tz.local);
-    const scheduleMode = AndroidScheduleMode.exactAllowWhileIdle;
+    final hasExact = await hasExactAlarmPermission();
+    final scheduleMode = hasExact
+        ? AndroidScheduleMode.exactAllowWhileIdle
+        : AndroidScheduleMode.inexactAllowWhileIdle;
 
     final Map<String, dynamic> daysMap =
         timetable.containsKey('timetable') && timetable['timetable'] is Map
@@ -314,11 +308,19 @@ class NotificationService {
         // Unique ID: dayIndex (0-6) * 100 + periodNumber -> supports up to 99 periods without collisions.
         final notifId = dayIndex * 100 + period.periodNumber;
 
+        final title = period.subject.isNotEmpty
+            ? 'Period ${period.periodNumber} · ${period.subject}'
+            : 'Period ${period.periodNumber}';
+        final room = period.classroom.trim();
+        final body = room.isNotEmpty
+            ? 'Starts at ${period.start} in $room'
+            : 'Starts at ${period.start}';
+
         try {
           await _plugin.zonedSchedule(
             notifId,
-            '⏰ Period ${period.periodNumber} starting soon',
-            '${period.subject} in ${period.classroom} · ${period.start}',
+            title,
+            body,
             scheduledDate,
             details,
             androidScheduleMode: scheduleMode,
@@ -327,15 +329,53 @@ class NotificationService {
             matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
           );
         } catch (e) {
-          // If exact alarms are restricted on a given device/OS version,
-          // fail quietly for that single notification rather than crash
-          // the whole scheduling pass.
+          // If exact alarm mode threw SecurityException (Android 14+), retry once with inexact
+          if (scheduleMode != AndroidScheduleMode.inexactAllowWhileIdle) {
+            try {
+              await _plugin.zonedSchedule(
+                notifId,
+                title,
+                body,
+                scheduledDate,
+                details,
+                androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+                uiLocalNotificationDateInterpretation:
+                    UILocalNotificationDateInterpretation.absoluteTime,
+                matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+              );
+              continue;
+            } catch (_) {}
+          }
           debugPrint(
               'NotificationService.scheduleAll: zonedSchedule for $dayKey period ${period.periodNumber} failed: $e');
           continue;
         }
       }
     }
+  }
+
+  /// Sends an immediate test notification to verify sound, icon, and delivery.
+  static Future<void> showTestNotification() async {
+    if (!_initialized) await init();
+    const androidDetails = AndroidNotificationDetails(
+      'period_reminders',
+      'Period Reminders',
+      channelDescription: 'Reminds you 5 minutes before each class period',
+      importance: Importance.high,
+      priority: Priority.high,
+      color: Primitives.actionGold,
+      category: AndroidNotificationCategory.reminder,
+    );
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(),
+    );
+    await _plugin.show(
+      9999,
+      'Notification Test',
+      'Class reminders are working properly.',
+      details,
+    );
   }
 
   static Future<void> cancelAll() async {

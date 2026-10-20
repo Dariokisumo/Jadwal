@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../constants/spacing.dart';
+import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../theme/relational_colors.dart';
+import '../widgets/app_feedback.dart';
 import 'period_timings_screen.dart';
 import 'saved_timetables_screen.dart';
 
@@ -19,6 +22,8 @@ class _MiscScreenState extends State<MiscScreen> {
   int _savedTimetablesCount = 1;
   String _activeTimetableName = 'Active';
   bool _timetableModified = false;
+  bool _notifGranted = false;
+  bool _exactAlarmGranted = false;
   bool _loading = true;
 
   @override
@@ -33,6 +38,8 @@ class _MiscScreenState extends State<MiscScreen> {
     final profiles = await StorageService.loadTimingProfiles();
     final savedTimetables = await StorageService.loadSavedTimetables();
     final activeTimetableId = await StorageService.loadActiveTimetableId();
+    final notifGranted = await NotificationService.arePermissionsGranted();
+    final exactAlarmGranted = await NotificationService.hasExactAlarmPermission();
 
     String activeName = 'Default';
     for (final p in profiles) {
@@ -56,8 +63,34 @@ class _MiscScreenState extends State<MiscScreen> {
         _activeProfileName = activeName;
         _savedTimetablesCount = savedTimetables.length;
         _activeTimetableName = activeTtName;
+        _notifGranted = notifGranted;
+        _exactAlarmGranted = exactAlarmGranted;
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _handleTestNotification() async {
+    try {
+      if (!_notifGranted) {
+        final ok = await NotificationService.requestPermission();
+        if (!ok) {
+          if (mounted) {
+            AppFeedback.showError(context, 'Notification permission denied');
+          }
+          await _loadSettings();
+          return;
+        }
+      }
+      await NotificationService.showTestNotification();
+      if (mounted) {
+        AppFeedback.showSuccess(context, 'Test notification sent');
+      }
+      await _loadSettings();
+    } catch (_) {
+      if (mounted) {
+        AppFeedback.showError(context, 'Could not send test notification');
+      }
     }
   }
 
@@ -290,6 +323,53 @@ class _MiscScreenState extends State<MiscScreen> {
                     subtitle: 'Daily period slot capacity (1–15)',
                     trailingBadge: '$_periodCount periods',
                     onTap: _showPeriodCountDialog,
+                    colors: colors,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  Text(
+                    'NOTIFICATIONS & REMINDERS',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+
+                  _buildOptionCard(
+                    icon: Icons.notifications_active_rounded,
+                    title: 'Class Alerts & Alarms',
+                    subtitle: _notifGranted
+                        ? (_exactAlarmGranted
+                            ? 'Notifications & exact alarms active'
+                            : 'Notifications active · Alarms restricted')
+                        : 'Notifications disabled in system settings',
+                    trailingBadge: _notifGranted && _exactAlarmGranted
+                        ? 'Healthy'
+                        : 'Fix',
+                    onTap: () async {
+                      if (!_notifGranted) {
+                        await openAppSettings();
+                      } else if (!_exactAlarmGranted) {
+                        await NotificationService.requestExactAlarmPermission();
+                      } else {
+                        await NotificationService.requestIgnoreBatteryOptimizations();
+                      }
+                      _loadSettings();
+                    },
+                    colors: colors,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  _buildOptionCard(
+                    icon: Icons.mark_email_read_rounded,
+                    title: 'Send Test Notification',
+                    subtitle: 'Verify alert sound, banner, and delivery on device',
+                    trailingBadge: 'Send',
+                    onTap: _handleTestNotification,
                     colors: colors,
                   ),
                   const SizedBox(height: AppSpacing.xl),

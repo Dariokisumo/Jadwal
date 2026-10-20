@@ -22,11 +22,11 @@ class Period {
     return Period(
       periodNumber: json['period'] is int
           ? json['period'] as int
-          : int.parse(json['period'].toString()),
-      subject: json['subject'].toString(),
-      classroom: json['classroom'].toString(),
-      start: json['start'].toString(),
-      end: json['end'].toString(),
+          : int.tryParse(json['period']?.toString() ?? '') ?? 0,
+      subject: json['subject']?.toString() ?? '',
+      classroom: json['classroom']?.toString() ?? '',
+      start: json['start']?.toString() ?? '',
+      end: json['end']?.toString() ?? '',
     );
   }
 

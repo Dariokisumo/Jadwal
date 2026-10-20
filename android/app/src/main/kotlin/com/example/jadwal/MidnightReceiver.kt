@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import java.util.Calendar
 
 class MidnightReceiver : BroadcastReceiver() {
@@ -34,11 +35,29 @@ class MidnightReceiver : BroadcastReceiver() {
                 set(Calendar.MILLISECOND, 0)
             }
 
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                midnight.timeInMillis,
-                pendingIntent
-            )
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        midnight.timeInMillis,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        midnight.timeInMillis,
+                        pendingIntent
+                    )
+                }
+            } catch (_: SecurityException) {
+                try {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        midnight.timeInMillis,
+                        pendingIntent
+                    )
+                } catch (_: Exception) {}
+            } catch (_: Exception) {}
         }
 
         fun cancel(context: Context) {
