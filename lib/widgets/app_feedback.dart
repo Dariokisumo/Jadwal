@@ -72,7 +72,7 @@ class AppFeedback {
     SnackBarAction? action,
   }) {
     final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
+    messenger.clearSnackBars();
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = context.relColors;

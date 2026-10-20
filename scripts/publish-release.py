@@ -25,23 +25,18 @@ def main():
     token = get_token()
     owner = "Dariokisumo"
     repo = "Jadwal"
-    tag = "v2.10.6"
-    release_name = "v2.10.6 — Relational Notification Tuneup & In-App Diagnostics"
-    release_body = """## What's new in v2.10.6
+    tag = "v2.10.7"
+    release_name = "v2.10.7 — UI Clutter Reduction & Setup Flow Refinement"
+    release_body = """## What's new in v2.10.7
 
-### ⏰ Resilient Exact Alarm Scheduling & Inexact Fallback
-- **Android 14+ Inexact Fallback**: Dynamically selects `exactAllowWhileIdle` when granted, with automated fallback to `inexactAllowWhileIdle` so period reminders are never silently lost.
-- **Settings Intent Resolution**: Fixed focus hijack in `MainActivity.kt` where opening Alarms & Reminders was immediately overridden by generic App Info.
+### 🧭 Streamlined Setup Screen & Progressive Disclosure
+- **Step 1 Accordion Collapse**: When Step 2 activates, Step 1 now automatically collapses into a sleek 52px summary chip with a "Change" action, keeping the primary "Import This Schedule" button in immediate focus above the fold.
+- **Removed Static Prompt Banner**: Eliminated the redundant permanent in-card prompt copy banner. Transient feedback is now handled cleanly by floating snackbars and button state swaps.
+- **Consolidated Entry Points**: Streamlined Step 1 to keep focus on AI assistant selection and photo alignment while retaining quick access to file uploads and demo schedules.
 
-### 🔔 Relational Notification Polish & Formatting
-- **Information Gravity**: Clean notification title leading with subject and period (`Period 3 · Mathematics`), keeping status bar and lockscreen immediately legible at a glance.
-- **Null-Safe Room Formatting**: Clean room text without awkward spacing (`Starts at 9:00 AM in Room 4` vs `Starts at 9:00 AM`).
-- **Emoji-Free Styling**: Replaced emoji prefix with clean semantic text according to Relational Design standards.
-
-### 🛠️ In-App Notification Diagnostics & Test Action
-- **Diagnostics Section in Misc**: New "NOTIFICATIONS & REMINDERS" relational card showing live permission and alarm health.
-- **Send Test Notification**: 1-tap instant test notification to verify sound, vibration, heads-up banner, and OEM background delivery.
-- **Non-Blocking Permission Flow**: Replaced startup blocking modal traps with an elegant AppBar indicator and polite, dismissible dialogs.
+### 🔔 Singleton Transient Notifications & Dismissible Errors
+- **Purged Notification Queue**: Upgraded notification dispatch in `AppFeedback` to immediately clear pending snackbars so rapid taps no longer stack lingering banners.
+- **Dismissible Error Box**: Added an interactive dismiss action to error alerts in Step 2, and ensured error states clear automatically upon valid timetable entry.
 
 ---
 
@@ -49,8 +44,8 @@ def main():
 
 | File | Architecture | Target Devices | Size | SHA256 |
 |---|---|---|---|---|
-| `jadwal-v2.10.6-65-release.apk` | **arm64-v8a** (64-bit) | Modern Android phones & tablets (recommended) | 24.33 MB | `c2975f2092aa33f24f67c74f8ee5a6bd265e6d52fd520cdb4575b756c1fc7273` |
-| `jadwal-v2.10.6-65-arm32-release.apk` | **armeabi-v7a** (32-bit) | Older & budget 32-bit Android devices | 21.98 MB | `c4f8e48315c055f5e14706c384303578ffa8b4089ab56d2e3f725e8b39f9f568` |
+| `jadwal-v2.10.7-66-release.apk` | **arm64-v8a** (64-bit) | Modern Android phones & tablets (recommended) | 24.33 MB | `7889854958369941752050812e6bfe180bbf79e6d36771f54f5a5487a77ab581` |
+| `jadwal-v2.10.7-66-arm32-release.apk` | **armeabi-v7a** (32-bit) | Older & budget 32-bit Android devices | 21.99 MB | `f6560bbaf336b0003d2e3ac82f657f65f1f5ce998a2c005d16fe0111775781b3` |
 """
 
     headers = {
@@ -91,8 +86,8 @@ def main():
 
     # Assets to upload
     assets = [
-        ("Apk files/jadwal-v2.10.6-65-release.apk", "jadwal-v2.10.6-65-release.apk"),
-        ("Apk files/apk32/jadwal-v2.10.6-65-release.apk", "jadwal-v2.10.6-65-arm32-release.apk")
+        ("Apk files/jadwal-v2.10.7-66-release.apk", "jadwal-v2.10.7-66-release.apk"),
+        ("Apk files/apk32/jadwal-v2.10.7-66-release.apk", "jadwal-v2.10.7-66-arm32-release.apk")
     ]
 
     for local_path, asset_name in assets:

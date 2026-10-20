@@ -151,6 +151,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
   String? _recentlyLaunchedAi;
   bool _stepOneComplete = false;
   bool _showStepTwo = false;
+  bool _stepOneExpanded = true;
   bool _showStepThree = false;
   late bool _showWelcomeGuide;
   bool _isProcessing = false;
@@ -261,6 +262,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
           _hasPastedContent = true;
           _stepOneComplete = true;
           _showStepTwo = true;
+          _stepOneExpanded = false;
           _showWelcomeGuide = false;
           _errorMessage = null;
         });
@@ -290,6 +292,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
         _parsedTimetable = normalized;
         _errorMessage = null;
         _showStepTwo = true;
+        _stepOneExpanded = false;
       });
     } else {
       setState(() {
@@ -313,6 +316,8 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
         _recentlyLaunchedAi = name;
         _stepOneComplete = true;
         _showStepTwo = true;
+        _stepOneExpanded = false;
+        _errorMessage = null;
       });
       AppFeedback.showSuccess(
         context,
@@ -340,6 +345,8 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
       _promptCopied = true;
       _stepOneComplete = true;
       _showStepTwo = true;
+      _stepOneExpanded = false;
+      _errorMessage = null;
     });
     if (mounted) {
       AppFeedback.showSuccess(context, 'Prompt copied to clipboard');
@@ -390,6 +397,8 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
             _recentlyLaunchedAi = assistantName;
             _stepOneComplete = true;
             _showStepTwo = true;
+            _stepOneExpanded = false;
+            _errorMessage = null;
           });
           AppFeedback.showSuccess(
             context,
@@ -413,6 +422,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
       _hasPastedContent = true;
       _stepOneComplete = true;
       _showStepTwo = true;
+      _stepOneExpanded = false;
       _showWelcomeGuide = false;
       _errorMessage = null;
     });
@@ -589,6 +599,7 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
           _jsonController.text = const JsonEncoder.withIndent('  ').convert(normalized);
           _hasPastedContent = true;
           _showStepTwo = true;
+          _stepOneExpanded = false;
           _showWelcomeGuide = false;
           _isProcessing = false;
           _errorMessage = null;
@@ -708,7 +719,10 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
                 _buildProgressIndicator(colors),
                 const SizedBox(height: AppSpacing.lg),
                 if (!_showStepThree) ...[
-                  _buildStepOne(colors),
+                  if (_showStepTwo && !_stepOneExpanded)
+                    _buildStepOneCollapsed(colors)
+                  else
+                    _buildStepOne(colors),
                   if (_showStepTwo) ...[
                     const SizedBox(height: AppSpacing.md),
                     _buildStepTwo(colors),
@@ -1261,38 +1275,6 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
             ],
           ),
 
-          if (_stepOneComplete) ...[
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: colors.actionSubtle,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.check_circle_outline_rounded, size: 16, color: colors.action),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      _recentlyLaunchedAi != null
-                          ? 'Prompt copied! Reopen Jadwal after copying result from $_recentlyLaunchedAi.'
-                          : 'Prompt copied! Paste it with your schedule image into your assistant.',
-                      style: TextStyle(
-                        fontFamily: 'Geist',
-                        fontSize: 12,
-                        color: colors.action,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
           const SizedBox(height: AppSpacing.sm),
           // Quiet secondary actions with overflow defense
           Wrap(
@@ -1321,7 +1303,10 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
               if (!_showStepTwo)
                 TextButton.icon(
                   onPressed: () {
-                    setState(() => _showStepTwo = true);
+                    setState(() {
+                      _showStepTwo = true;
+                      _stepOneExpanded = false;
+                    });
                     _scrollToStepTwo();
                   },
                   icon: Icon(Icons.arrow_downward_rounded, size: 16, color: colors.action),
@@ -1334,10 +1319,156 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
                       color: colors.action,
                     ),
                   ),
+                )
+              else
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() => _stepOneExpanded = false);
+                  },
+                  icon: Icon(Icons.keyboard_arrow_up_rounded, size: 16, color: colors.textSecondary),
+                  label: Text(
+                    'Done',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: colors.action,
+                    ),
+                  ),
                 ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStepOneCollapsed(RelationalColors colors) {
+    String subtitle;
+    if (_recentlyLaunchedAi != null) {
+      subtitle = 'Prompt shared with $_recentlyLaunchedAi';
+    } else if (_parsedTimetable != null) {
+      final teacher = _parsedTimetable!['teacher'] as String? ?? 'Teacher';
+      subtitle = 'Schedule loaded for $teacher';
+    } else if (_stepOneComplete) {
+      subtitle = 'Prompt copied to clipboard';
+    } else {
+      subtitle = 'Assistant & photo step complete';
+    }
+
+    return Semantics(
+      label: 'Step 1: Choose Assistant, Completed. Tap to change assistant.',
+      button: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => setState(() => _stepOneExpanded = true),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.base,
+              vertical: AppSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainer,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colors.borderSubtle),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: colors.actionSubtle,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    color: colors.action,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Step 1: Assistant & Photo',
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: colors.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: colors.actionSubtle,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'DONE',
+                              style: TextStyle(
+                                fontFamily: 'Geist',
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                                color: colors.action,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontFamily: 'Geist',
+                          fontSize: 12,
+                          color: colors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() => _stepOneExpanded = true);
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.action,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Change',
+                    style: TextStyle(
+                      fontFamily: 'Geist',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -2083,6 +2214,25 @@ class _SetupScreenState extends State<SetupScreen> with WidgetsBindingObserver {
                   fontFamily: 'Geist',
                   fontSize: 13,
                   color: colors.danger,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Semantics(
+              button: true,
+              label: 'Dismiss error',
+              child: InkWell(
+                onTap: () {
+                  setState(() => _errorMessage = null);
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: Icon(
+                    Icons.close_rounded,
+                    color: colors.danger,
+                    size: 18,
+                  ),
                 ),
               ),
             ),
