@@ -15,30 +15,33 @@ def get_token():
     # format: https://<token>@github.com/...
     if "@" in url and "://" in url:
         part = url.split("://", 1)[1]
-        token = part.split("@", 1)[0]
-        return token
+        user_or_token = part.split("@", 1)[0]
+        if ":" in user_or_token:
+            return user_or_token.split(":", 1)[1]
+        return user_or_token
     raise ValueError("Could not extract token from GITHUB_TOKEN env or git remote origin")
 
 def main():
     token = get_token()
     owner = "Dariokisumo"
     repo = "Jadwal"
-    tag = "v2.10.5"
-    release_name = "v2.10.5 — Illustrated App Logo & Themed Monochrome Icon"
-    release_body = """## What's new in v2.10.5
+    tag = "v2.10.6"
+    release_name = "v2.10.6 — Relational Notification Tuneup & In-App Diagnostics"
+    release_body = """## What's new in v2.10.6
 
-### 🎨 Illustrated App Brand Logo
-- **New Illustrated Icon**: Integrated the new illustrated calendar & clock brand icon across all Android launcher densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`) and web touch icons.
-- **Normal Launcher Clarity**: Full-color illustrated calendar and clock artwork with realistic drop-shadow depth against a crisp white background badge.
+### ⏰ Resilient Exact Alarm Scheduling & Inexact Fallback
+- **Android 14+ Inexact Fallback**: Dynamically selects `exactAllowWhileIdle` when granted, with automated fallback to `inexactAllowWhileIdle` so period reminders are never silently lost.
+- **Settings Intent Resolution**: Fixed focus hijack in `MainActivity.kt` where opening Alarms & Reminders was immediately overridden by generic App Info.
 
-### 🌓 Material You Adaptive Monochrome Themed Icon
-- **Negative-Space Depth Architecture**: Rather than flattening the icon into an amorphous solid blob, the monochrome layer uses transparent viewports for the calendar body and clock face, providing maximum contrast for the number **7** and clock hands.
-- **3D Spiral Binder Rings**: Preserved ring apertures ensuring the spiral loops arch naturally over the binder.
-- **Multi-Tone Alpha Shading**: Soft secondary opacity for the binder header and fanned bottom pages retains 3D paper layers across both Light and Dark system wallpaper palettes.
-- **Subpixel Anti-Aliasing**: Smooth boundary Gaussian edge modulation prevents stair-stepping across all display densities.
+### 🔔 Relational Notification Polish & Formatting
+- **Information Gravity**: Clean notification title leading with subject and period (`Period 3 · Mathematics`), keeping status bar and lockscreen immediately legible at a glance.
+- **Null-Safe Room Formatting**: Clean room text without awkward spacing (`Starts at 9:00 AM in Room 4` vs `Starts at 9:00 AM`).
+- **Emoji-Free Styling**: Replaced emoji prefix with clean semantic text according to Relational Design standards.
 
-### 🌐 Companion Web Portal & Synchronized Downloads
-- Synced direct APK download links and brand favicons on `https://getjadwal.surge.sh` and `https://dariokisumo.github.io`.
+### 🛠️ In-App Notification Diagnostics & Test Action
+- **Diagnostics Section in Misc**: New "NOTIFICATIONS & REMINDERS" relational card showing live permission and alarm health.
+- **Send Test Notification**: 1-tap instant test notification to verify sound, vibration, heads-up banner, and OEM background delivery.
+- **Non-Blocking Permission Flow**: Replaced startup blocking modal traps with an elegant AppBar indicator and polite, dismissible dialogs.
 
 ---
 
@@ -46,8 +49,8 @@ def main():
 
 | File | Architecture | Target Devices | Size | SHA256 |
 |---|---|---|---|---|
-| `jadwal-v2.10.5-64-release.apk` | **arm64-v8a** (64-bit) | Modern Android phones & tablets (recommended) | 24.33 MB | `c9ebe8770876e2f5545876e3521777fbc4922983e070dab220c7f772c7a555fc` |
-| `jadwal-v2.10.5-64-arm32-release.apk` | **armeabi-v7a** (32-bit) | Older & budget 32-bit Android devices | 21.98 MB | `a8492ac8c221eb274af2cb6e1d762c06ff0211f48fb8a5019ad8d976083d7582` |
+| `jadwal-v2.10.6-65-release.apk` | **arm64-v8a** (64-bit) | Modern Android phones & tablets (recommended) | 24.33 MB | `c2975f2092aa33f24f67c74f8ee5a6bd265e6d52fd520cdb4575b756c1fc7273` |
+| `jadwal-v2.10.6-65-arm32-release.apk` | **armeabi-v7a** (32-bit) | Older & budget 32-bit Android devices | 21.98 MB | `c4f8e48315c055f5e14706c384303578ffa8b4089ab56d2e3f725e8b39f9f568` |
 """
 
     headers = {
@@ -88,8 +91,8 @@ def main():
 
     # Assets to upload
     assets = [
-        ("Apk files/jadwal-v2.10.5-64-release.apk", "jadwal-v2.10.5-64-release.apk"),
-        ("Apk files/apk32/jadwal-v2.10.5-64-release.apk", "jadwal-v2.10.5-64-arm32-release.apk")
+        ("Apk files/jadwal-v2.10.6-65-release.apk", "jadwal-v2.10.6-65-release.apk"),
+        ("Apk files/apk32/jadwal-v2.10.6-65-release.apk", "jadwal-v2.10.6-65-arm32-release.apk")
     ]
 
     for local_path, asset_name in assets:
